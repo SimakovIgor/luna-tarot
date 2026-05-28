@@ -1,0 +1,43 @@
+.btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 22px;
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: .28em;
+  text-transform: uppercase;
+  color: var(--gold-warm);
+  background: linear-gradient(180deg, rgba(201,161,74,.04), rgba(201,161,74,0));
+  border: 1px solid var(--line-hot);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: color var(--t-fast) ease, border-color var(--t-fast) ease, transform var(--t-fast) ease, background var(--t-fast) ease;
+  text-decoration: none;
+}
+.btn:hover {
+  color: var(--ink);
+  border-color: var(--gold);
+  background: linear-gradient(180deg, rgba(201,161,74,.12), rgba(201,161,74,.02));
+}
+.btn:active { transform: scale(.97); }
+.btn:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.full {
+  width: 100%;
+}
+
+.ghost {
+  border-color: var(--line);
+  color: var(--ink-dim);
+}
+.ghost:hover {
+  color: var(--ink);
+  border-color: var(--line-hot);
+}

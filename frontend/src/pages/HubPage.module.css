@@ -1,0 +1,174 @@
+/* Caption — обычный поток после spacer'а. Никакого absolute, текст не уезжает за экран.
+   Bottom-margin даёт явный воздух до блока ритуалов. */
+.dayCaption {
+  position: relative;
+  /* Выше DayCard (50) — чтобы текст «коснись карты» был поверх возможной тени карты. */
+  z-index: 100;
+  padding: 0 16px;
+  margin-bottom: 16px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-height: 50px;
+}
+
+/* Spacer резервирует место в потоке под fixed DayCard.
+   Карта-fixed располагается на y = env(safe-area-inset-top) + --day-card-top.
+   ScreenContainer тоже добавляет padding-top равный env(safe-area-inset-top) — значит
+   эти отступы сокращаются. Реальный verical offset до карты внутри контейнера = --day-card-top.
+   Каптион должен оказаться чуть ниже низа карты:
+     spacer_h = --day-card-top + card_h - AppHeader_h + gap
+   AppHeader = 80px лого + 4px padding-top ≈ 84px.
+   gap = 16px воздуха между картой и текстом.
+   На дефолтах: 110 + 224 − 84 + 16 = 266px. */
+.cardSpacer {
+  height: calc(var(--day-card-top, 110px) + var(--day-card-height, 224px) - 84px + 16px);
+  flex-shrink: 0;
+}
+
+.dayName {
+  font-family: var(--font-display);
+  font-size: var(--text-md, 14px);
+  letter-spacing: 0.12em;
+  color: var(--ink);
+  text-transform: uppercase;
+}
+
+.dayWhisper {
+  font-family: var(--font-italic);
+  font-style: italic;
+  font-size: var(--text-sm, 12px);
+  color: var(--ink-dim);
+  line-height: 1.4;
+  max-width: 280px;
+}
+
+.dayHint {
+  font-family: var(--font-italic);
+  font-style: italic;
+  font-size: var(--text-sm, 12px);
+  color: var(--ink-dim);
+  /* Не даём caption съехать в ширину больше колонки */
+  max-width: 280px;
+  line-height: 1.4;
+}
+
+.readMore {
+  margin-top: 2px;
+  font-family: var(--font-display);
+  font-size: 9.5px;
+  letter-spacing: .28em;
+  text-transform: uppercase;
+  color: var(--gold);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 6px;
+  transition: color .2s ease, transform .2s ease;
+}
+.readMore:hover { color: var(--gold-warm); transform: translateX(2px); }
+
+.flipBack {
+  margin-top: 4px;
+  font-family: var(--font-display);
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 6px;
+  transition: color .2s ease;
+}
+.flipBack:hover { color: var(--gold); }
+
+/* ── Нижний стак: ритуалы + дневник, прижаты к низу ───────── */
+.bottomStack {
+  margin-top: auto;
+  padding-bottom: env(safe-area-inset-bottom, 8px);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+  z-index: 2;
+}
+
+.ritualSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ritualGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+/* «Выбрать наугад» с хаба убрана — теперь живёт внутри ReadingFlowPage (стадия выбора веера). */
+
+/* ── Дневник: одна строка ──────────────────────────────────── */
+.diaryRow {
+  display: grid;
+  grid-template-columns: 36px 1fr 22px;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--line, rgba(212, 175, 55, 0.22));
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(0, 0, 0, 0.18));
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: border-color 0.3s ease, transform 0.2s ease;
+}
+.diaryRow:hover {
+  border-color: var(--line-hot);
+  transform: translateY(-1px);
+}
+
+.diaryIcon {
+  width: 30px;
+  height: 30px;
+  color: var(--gold-warm);
+  border: 1px solid rgba(201,161,74,.3);
+  border-radius: 50%;
+  padding: 5px;
+  box-sizing: border-box;
+}
+
+.diaryText {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.diaryTitle {
+  font-family: var(--font-display);
+  font-size: var(--text-md, 14px);
+  letter-spacing: 0.05em;
+  color: var(--ink);
+}
+
+.diaryHint {
+  font-family: var(--font-italic);
+  font-style: italic;
+  font-size: var(--text-sm, 12px);
+  color: var(--ink-dim);
+}
+
+.diaryArrow {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gold);
+  font-size: 12px;
+}

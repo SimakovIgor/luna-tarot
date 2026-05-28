@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Luna Tarot — Загляни в своё будущее</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=UnifrakturMaguntia&display=swap" rel="stylesheet"/>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { background: #06040f; color: white; font-family: 'DM Sans', sans-serif; overflow-x: hidden; }
+:root {
+  --p-btn: linear-gradient(135deg,#4c1d95,#5b21b6);
+  --p-glow: rgba(91,33,182,.4);
+  --p-border: rgba(91,33,182,.25);
+}
+#starfield { position:fixed; inset:0; z-index:0; pointer-events:none; }
+nav { position:fixed; top:0; left:0; right:0; z-index:100; display:flex; align-items:center; justify-content:space-between; padding:20px 80px; background:rgba(6,4,15,.78); backdrop-filter:blur(22px); border-bottom:1px solid var(--p-border); }
+.logo { display:flex; align-items:center; gap:10px; text-decoration:none; }
+.logo-orb { width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg,#5b21b6,#a78bfa); display:flex; align-items:center; justify-content:center; font-size:16px; }
+.logo-name { font-family:'Cormorant Garamond',serif; font-size:21px; font-weight:600; color:white; white-space:nowrap; }
+.nav-links { display:flex; gap:32px; }
+.nav-link { font-size:14px; color:rgba(255,255,255,.38); text-decoration:none; transition:color .2s; }
+.nav-link:hover { color:white; }
+.cta-btn { display:inline-flex; align-items:center; gap:8px; background:var(--p-btn); border:none; border-radius:28px; padding:13px 28px; color:white; font-size:14px; font-weight:600; cursor:pointer; font-family:'DM Sans',sans-serif; box-shadow:0 6px 24px var(--p-glow); text-decoration:none; transition:transform .2s,box-shadow .2s; }
+.cta-btn:hover { transform:translateY(-2px); box-shadow:0 10px 36px var(--p-glow); }
+.cta-btn.large { font-size:16px; padding:18px 44px; border-radius:34px; }
+.hero { position:relative; min-height:100vh; display:flex; align-items:center; padding:120px 80px 80px; z-index:1; }
+.hero-content { flex:1; max-width:580px; }
+.eyebrow { display:inline-flex; align-items:center; gap:8px; background:rgba(91,33,182,.12); border:1px solid rgba(91,33,182,.28); border-radius:20px; padding:6px 18px; margin-bottom:36px; font-size:12px; color:rgba(167,139,250,.8); letter-spacing:.12em; text-transform:uppercase; }
+h1 { font-family:'Cormorant Garamond',serif; font-size:82px; font-weight:600; line-height:.92; margin:0 0 32px; letter-spacing:-.02em; background:linear-gradient(140deg,#fff 0%,#c4b5fd 60%,#a78bfa 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+.hero-sub { font-size:17px; line-height:1.7; color:rgba(255,255,255,.5); margin:0 0 44px; max-width:440px; }
+.hero-btns { display:flex; gap:14px; align-items:center; flex-wrap:wrap; }
+.hero-note { font-size:13px; color:rgba(255,255,255,.28); }
+.hero-card-zone { flex-shrink:0; width:280px; margin-left:60px; display:flex; flex-direction:column; align-items:center; gap:18px; }
+.flip-hint { font-size:11px; color:rgba(167,139,250,.6); letter-spacing:.1em; text-transform:uppercase; opacity:0; transition:opacity .4s; text-align:center; }
+.hero-card-zone:hover .flip-hint { opacity:1; }
+.hc-perspective { perspective:1200px; width:240px; height:388px; }
+@keyframes card-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-18px)} }
+.hc-float { width:100%; height:100%; transform-style:preserve-3d; animation:card-float 6s ease-in-out infinite; cursor:pointer; }
+.hc-float:hover { animation-play-state:paused; }
+.hc-float:hover .hc-inner { transform:rotateY(180deg); }
+.hc-inner { width:100%; height:100%; position:relative; transform-style:preserve-3d; transition:transform .9s cubic-bezier(.4,.2,.2,1); }
+.hc-side { position:absolute; inset:0; border-radius:12px; overflow:hidden; backface-visibility:hidden; -webkit-backface-visibility:hidden; }
+.hc-face { transform:rotateY(180deg); }
+section.content { position:relative; z-index:1; }
+.reading-section { padding:100px 80px; background:rgba(91,33,182,.04); border-top:1px solid var(--p-border); border-bottom:1px solid var(--p-border); }
+.section-title { font-family:'Cormorant Garamond',serif; font-size:50px; font-weight:600; text-align:center; margin-bottom:12px; background:linear-gradient(135deg,#fff,#c4b5fd); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+.section-sub { text-align:center; color:rgba(255,255,255,.4); font-size:16px; margin-bottom:60px; }
+.cards-row { display:flex; justify-content:center; gap:44px; align-items:flex-end; }
+.card-slot { display:flex; flex-direction:column; align-items:center; gap:12px; }
+.card-pos { font-size:11px; color:rgba(255,255,255,.38); letter-spacing:.08em; text-transform:uppercase; }
+.interp-box { max-width:680px; margin:56px auto 0; background:rgba(91,33,182,.1); border-radius:20px; padding:30px 38px; border:1px solid var(--p-border); }
+.interp-label { font-size:11px; color:#c9a14a; font-weight:700; letter-spacing:.12em; text-transform:uppercase; margin-bottom:12px; }
+.interp-text { font-size:16px; line-height:1.7; color:rgba(255,255,255,.68); }
+.how-section { padding:100px 80px; }
+.steps-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:28px; margin-top:60px; }
+.step-card { background:rgba(91,33,182,.06); border-radius:20px; padding:38px 30px; border:1px solid var(--p-border); position:relative; overflow:hidden; }
+.step-num { position:absolute; top:18px; right:22px; font-family:'Cormorant Garamond',serif; font-size:52px; font-weight:600; color:rgba(91,33,182,.12); line-height:1; }
+.step-icon { font-size:36px; margin-bottom:20px; }
+.step-title { font-family:'Cormorant Garamond',serif; font-size:26px; font-weight:600; color:white; margin-bottom:12px; }
+.step-text { font-size:15px; color:rgba(255,255,255,.48); line-height:1.65; }
+.features-section { padding:0 80px 100px; }
+.features-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:18px; }
+.feature-card { background:rgba(255,255,255,.025); border-radius:16px; padding:28px 22px; border:1px solid rgba(255,255,255,.055); }
+.feature-icon { font-size:30px; margin-bottom:14px; }
+.feature-title { font-size:15px; font-weight:600; color:white; margin-bottom:8px; }
+.feature-text { font-size:13px; color:rgba(255,255,255,.4); line-height:1.65; }
+.footer-cta { position:relative; z-index:1; padding:120px 80px; text-align:center; }
+.footer-cta h2 { font-family:'Cormorant Garamond',serif; font-size:68px; font-weight:600; line-height:1.05; margin-bottom:28px; background:linear-gradient(135deg,#fff,#c4b5fd); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+.footer-note { margin-top:22px; color:rgba(255,255,255,.28); font-size:13px; }
+footer { position:relative; z-index:1; padding:28px 80px; border-top:1px solid rgba(255,255,255,.05); display:flex; justify-content:space-between; align-items:center; }
+.footer-logo { font-family:'Cormorant Garamond',serif; font-size:18px; color:rgba(255,255,255,.35); }
+.footer-copy { font-size:13px; color:rgba(255,255,255,.22); }
+</style>
+</head>
+<body>
+<canvas id="starfield"></canvas>
+<nav>
+  <a href="#" class="logo"><div class="logo-orb">☽</div><span class="logo-name">Luna Tarot</span></a>
+  <div class="nav-links">
+    <a href="#how" class="nav-link">Как работает</a>
+    <a href="#reading" class="nav-link">Пример</a>
+    <a href="#features" class="nav-link">Возможности</a>
+  </div>
+  <a href="https://t.me/" class="cta-btn">
+    <svg width="17" height="17" viewBox="0 0 22 22" fill="none"><path d="M11 2C6.03 2 2 6.03 2 11s4.03 9 9 9 9-4.03 9-9-4.03-9-9-9zm3.93 6.04-1.39 6.72c-.11.55-.44.68-.9.42l-2-.15-1 .96c-.11.11-.21.21-.45.21l.15-2.04 3.9-3.52c.18-.17-.05-.26-.3-.09L8.17 12.3l-1.97-.6c-.53-.17-.54-.53.1-.78l8.1-3.16c.44-.17.83.09.53.28z" fill="white"/></svg>
+    Открыть бота
+  </a>
+</nav>
+
+<section class="hero">
+  <div class="hero-content">
+    <div class="eyebrow">✦ ИИ-таролог нового поколения</div>
+    <h1>Загляни в своё<br/>будущее</h1>
+    <p class="hero-sub">Luna читает карты, понимает контекст и даёт персональный ответ — не шаблон, а живой расклад под твой вопрос.</p>
+    <div class="hero-btns">
+      <a href="https://t.me/" class="cta-btn large">
+        <svg width="21" height="21" viewBox="0 0 22 22" fill="none"><path d="M11 2C6.03 2 2 6.03 2 11s4.03 9 9 9 9-4.03 9-9-4.03-9-9-9zm3.93 6.04-1.39 6.72c-.11.55-.44.68-.9.42l-2-.15-1 .96c-.11.11-.21.21-.45.21l.15-2.04 3.9-3.52c.18-.17-.05-.26-.3-.09L8.17 12.3l-1.97-.6c-.53-.17-.54-.53.1-.78l8.1-3.16c.44-.17.83.09.53.28z" fill="white"/></svg>
+        Начать в Telegram
+      </a>
+      <span class="hero-note">Бесплатно · Без регистрации</span>
+    </div>
+  </div>
+
+  <div class="hero-card-zone">
+    <div class="flip-hint">✦ наведи — Отшельник откроется</div>
+    <div class="hc-perspective">
+      <div class="hc-float">
+        <div class="hc-inner">
+
+<!-- ══ BACK: Art Nouveau Luna — warm aged parchment ══ -->
+<div class="hc-side">
+<svg width="240" height="388" viewBox="0 0 240 388" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <!-- Warm amber dark background (not cold black) -->
+  <radialGradient id="b-bg" cx="120" cy="180" r="200" gradientUnits="userSpaceOnUse">
+    <stop offset="0%" stop-color="#221800"/>
+    <stop offset="45%" stop-color="#130e00"/>
+    <stop offset="100%" stop-color="#060300"/>
+  </radialGradient>
+  <!-- STRONG vignette — card bleeds into dark page bg -->
+  <radialGradient id="b-vig" cx="50%" cy="50%" r="52%">
+    <stop offset="0%" stop-color="rgba(0,0,0,0)"/>
+    <stop offset="75%" stop-color="rgba(4,2,10,.45)"/>
+    <stop offset="100%" stop-color="rgba(4,2,10,.82)"/>
+  </radialGradient>
+  <!-- Worn corner glow (handled edges of old card) -->
+  <radialGradient id="b-wTL" cx="0%" cy="0%" r="40%"><stop offset="0%" stop-color="rgba(210,170,60,.30)"/><stop offset="100%" stop-color="rgba(0,0,0,0)"/></radialGradient>
+  <radialGradient id="b-wTR" cx="100%" cy="0%" r="40%"><stop offset="0%" stop-color="rgba(210,170,60,.24)"/><stop offset="100%" stop-color="rgba(0,0,0,0)"/></radialGradient>
+  <radialGradient id="b-wBL" cx="0%" cy="100%" r="40%"><stop offset="0%" stop-color="rgba(210,170,60,.22)"/><stop offset="100%" stop-color="rgba(0,0,0,0)"/></radialGradient>
+  <radialGradient id="b-wBR" cx="100%" cy="100%" r="40%"><stop offset="0%" stop-color="rgba(210,170,60,.28)"/><stop offset="100%" stop-color="rgba(0,0,0,0)"/></radialGradient>
+  <!-- Warm grain + craquelure filter -->
+  <filter id="b-f" x="-2%" y="-2%" width="104%" height="104%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.62" numOctaves="4" seed="13" result="grain"/>
+    <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0.12 0 0 0 0 0.09 0 0 0 0 0 0 0 0 0.32 0" result="g2"/>
+    <feBlend in="SourceGraphic" in2="g2" mode="multiply"/>
+  </filter>
+  <!-- Reusable rose shape -->
+  <symbol id="b-rose" overflow="visible">
+    <ellipse rx="7" ry="16" fill-opacity=".52"/><ellipse rx="7" ry="16" transform="rotate(45)" fill-opacity=".46"/>
+    <ellipse rx="7" ry="16" transform="rotate(90)" fill-opacity=".52"/><ellipse rx="7" ry="16" transform="rotate(135)" fill-opacity=".46"/>
+    <ellipse rx="7" ry="16" transform="rotate(180)" fill-opacity=".52"/><ellipse rx="7" ry="16" transform="rotate(225)" fill-opacity=".46"/>
+    <ellipse rx="7" ry="16" transform="rotate(270)" fill-opacity=".52"/><ellipse rx="7" ry="16" transform="rotate(315)" fill-opacity=".46"/>
+    <ellipse rx="4.5" ry="9" transform="rotate(22.5)" fill-opacity=".60"/><ellipse rx="4.5" ry="9" transform="rotate(67.5)" fill-opacity=".54"/>
+    <ellipse rx="4.5" ry="9" transform="rotate(112.5)" fill-opacity=".60"/><ellipse rx="4.5" ry="9" transform="rotate(157.5)" fill-opacity=".54"/>
+    <ellipse rx="4.5" ry="9" transform="rotate(202.5)" fill-opacity=".60"/><ellipse rx="4.5" ry="9" transform="rotate(247.5)" fill-opacity=".54"/>
+    <ellipse rx="4.5" ry="9" transform="rotate(292.5)" fill-opacity=".60"/><ellipse rx="4.5" ry="9" transform="rotate(337.5)" fill-opacity=".54"/>
+  </symbol>
+  <symbol id="b-rose-sm" overflow="visible">
+    <ellipse rx="5" ry="11" fill-opacity=".50"/><ellipse rx="5" ry="11" transform="rotate(45)" fill-opacity=".44"/>
+    <ellipse rx="5" ry="11" transform="rotate(90)" fill-opacity=".50"/><ellipse rx="5" ry="11" transform="rotate(135)" fill-opacity=".44"/>
+    <ellipse rx="5" ry="11" transform="rotate(180)" fill-opacity=".50"/><ellipse rx="5" ry="11" transform="rotate(225)" fill-opacity=".44"/>
+    <ellipse rx="5" ry="11" transform="rotate(270)" fill-opacity=".50"/><ellipse rx="5" ry="11" transform="rotate(315)" fill-opacity=".44"/>
+  </symbol>
+  <symbol id="b-fl" overflow="visible">
+    <ellipse rx="3" ry="6.5" fill-opacity=".66"/><ellipse rx="3" ry="6.5" transform="rotate(60)" fill-opacity=".60"/>
+    <ellipse rx="3" ry="6.5" transform="rotate(120)" fill-opacity=".66"/><ellipse rx="3" ry="6.5" transform="rotate(180)" fill-opacity=".60"/>
+    <ellipse rx="3" ry="6.5" transform="rotate(240)" fill-opacity=".66"/><ellipse rx="3" ry="6.5" transform="rotate(300)" fill-opacity=".60"/>
+  </symbol>
+</defs>
+<rect width="240" height="388" rx="12" fill="url(#b-bg)"/>
+<rect width="240" height="388" rx="12" fill="url(#b-wTL)"/>
+<rect width="240" height="388" rx="12" fill="url(#b-wTR)"/>
+<rect width="240" height="388" rx="12" fill="url(#b-wBL)"/>
+<rect width="240" height="388" rx="12" fill="url(#b-wBR)"/>
+<!-- Dog-ear worn corners -->
+<polygon points="5,5 5,36 36,5" fill="rgba(210,180,80,.22)"/>
+<polygon points="235,383 235,352 204,383" fill="rgba(210,180,80,.18)"/>
+<polygon points="235,5 204,5 235,36" fill="rgba(210,180,80,.16)"/>
+<polygon points="5,383 36,383 5,352" fill="rgba(210,180,80,.14)"/>
+<!-- Borders -->
+<rect x="5" y="5" width="230" height="378" rx="9" fill="none" stroke="#c9a040" stroke-width="2" stroke-opacity=".88"/>
+<rect x="5" y="5" width="230" height="378" rx="9" fill="none" stroke="#ffe090" stroke-width=".4" stroke-opacity=".32"/>
+<rect x="11" y="11" width="218" height="366" rx="6" fill="none" stroke="#c9a040" stroke-width=".8" stroke-opacity=".62"/>
+<rect x="18" y="18" width="204" height="352" rx="4" fill="none" stroke="#c9a040" stroke-width=".4" stroke-opacity=".42"/>
+<!-- Corner roses -->
+<use href="#b-rose" x="24" y="24" fill="#c9a040"/>
+<circle cx="24" cy="24" r="4.5" fill="#120d00"/><circle cx="24" cy="24" r="2.5" fill="#c9a040" fill-opacity=".75"/>
+<use href="#b-rose" x="216" y="24" fill="#c9a040"/>
+<circle cx="216" cy="24" r="4.5" fill="#120d00"/><circle cx="216" cy="24" r="2.5" fill="#c9a040" fill-opacity=".75"/>
+<use href="#b-rose" x="24" y="364" fill="#c9a040"/>
+<circle cx="24" cy="364" r="4.5" fill="#120d00"/><circle cx="24" cy="364" r="2.5" fill="#c9a040" fill-opacity=".75"/>
+<use href="#b-rose" x="216" y="364" fill="#c9a040"/>
+<circle cx="216" cy="364" r="4.5" fill="#120d00"/><circle cx="216" cy="364" r="2.5" fill="#c9a040" fill-opacity=".75"/>
+<!-- Mid roses -->
+<use href="#b-rose-sm" x="120" y="12" fill="#c9a040"/>
+<circle cx="120" cy="12" r="3.5" fill="#120d00"/><circle cx="120" cy="12" r="2" fill="#c9a040" fill-opacity=".7"/>
+<use href="#b-rose-sm" x="120" y="376" fill="#c9a040"/>
+<circle cx="120" cy="376" r="3.5" fill="#120d00"/><circle cx="120" cy="376" r="2" fill="#c9a040" fill-opacity=".7"/>
+<use href="#b-rose-sm" x="9" y="194" fill="#c9a040"/>
+<circle cx="9" cy="194" r="3.5" fill="#120d00"/>
+<use href="#b-rose-sm" x="231" y="194" fill="#c9a040"/>
+<circle cx="231" cy="194" r="3.5" fill="#120d00"/>
+<!-- Vine scrollwork -->
+<path d="M 20,44 Q 7,85 20,128 Q 33,170 18,212 Q 3,254 18,296 Q 33,338 20,344" fill="none" stroke="#c9a040" stroke-width="1.7" stroke-opacity=".68" stroke-linecap="round"/>
+<path d="M 220,44 Q 233,85 220,128 Q 207,170 222,212 Q 237,254 222,296 Q 207,338 220,344" fill="none" stroke="#c9a040" stroke-width="1.7" stroke-opacity=".68" stroke-linecap="round"/>
+<path d="M 44,16 Q 82,6 120,18 Q 158,6 196,16" fill="none" stroke="#c9a040" stroke-width="1.7" stroke-opacity=".68" stroke-linecap="round"/>
+<path d="M 44,372 Q 82,382 120,370 Q 158,382 196,372" fill="none" stroke="#c9a040" stroke-width="1.7" stroke-opacity=".68" stroke-linecap="round"/>
+<!-- Branches -->
+<g fill="none" stroke="#c9a040" stroke-opacity=".56" stroke-linecap="round">
+  <path d="M 20,128 C 34,116 56,114 62,128" stroke-width="1.2"/><path d="M 18,212 C 34,198 58,196 64,210" stroke-width="1.2"/>
+  <path d="M 18,296 C 32,282 54,280 60,294" stroke-width="1.2"/>
+  <path d="M 220,128 C 206,116 184,114 178,128" stroke-width="1.2"/><path d="M 222,212 C 206,198 182,196 176,210" stroke-width="1.2"/>
+  <path d="M 222,296 C 208,282 186,280 180,294" stroke-width="1.2"/>
+  <path d="M 82,10 C 78,22 74,34 70,44" stroke-width="1"/><path d="M 158,10 C 162,22 166,34 170,44" stroke-width="1"/>
+  <path d="M 82,378 C 78,366 74,354 70,344" stroke-width="1"/><path d="M 158,378 C 162,366 166,354 170,344" stroke-width="1"/>
+</g>
+<!-- Vine flowers -->
+<use href="#b-fl" x="62" y="128" fill="#c9a040"/><circle cx="62" cy="128" r="2.5" fill="#120d00"/><circle cx="62" cy="128" r="1.5" fill="#c9a040" fill-opacity=".8"/>
+<use href="#b-fl" x="64" y="212" fill="#c9a040"/><circle cx="64" cy="212" r="2.5" fill="#120d00"/><circle cx="64" cy="212" r="1.5" fill="#c9a040" fill-opacity=".8"/>
+<use href="#b-fl" x="60" y="296" fill="#c9a040"/><circle cx="60" cy="296" r="2.5" fill="#120d00"/><circle cx="60" cy="296" r="1.5" fill="#c9a040" fill-opacity=".8"/>
+<use href="#b-fl" x="178" y="128" fill="#c9a040"/><circle cx="178" cy="128" r="2.5" fill="#120d00"/><circle cx="178" cy="128" r="1.5" fill="#c9a040" fill-opacity=".8"/>
+<use href="#b-fl" x="176" y="212" fill="#c9a040"/><circle cx="176" cy="212" r="2.5" fill="#120d00"/><circle cx="176" cy="212" r="1.5" fill="#c9a040" fill-opacity=".8"/>
+<use href="#b-fl" x="180" y="296" fill="#c9a040"/><circle cx="180" cy="296" r="2.5" fill="#120d00"/><circle cx="180" cy="296" r="1.5" fill="#c9a040" fill-opacity=".8"/>
+<use href="#b-fl" x="70" y="44" fill="#c9a040"/><circle cx="70" cy="44" r="2" fill="#120d00"/>
+<use href="#b-fl" x="170" y="44" fill="#c9a040"/><circle cx="170" cy="44" r="2" fill="#120d00"/>
+<use href="#b-fl" x="70" y="344" fill="#c9a040"/><circle cx="70" cy="344" r="2" fill="#120d00"/>
+<use href="#b-fl" x="170" y="344" fill="#c9a040"/><circle cx="170" cy="344" r="2" fill="#120d00"/>
+<!-- White accent flowers -->
+<g fill="rgba(240,230,180,.50)">
+  <ellipse cx="46" cy="50" rx="2" ry="5"/><ellipse cx="46" cy="50" rx="2" ry="5" transform="rotate(60,46,50)"/>
+  <ellipse cx="46" cy="50" rx="2" ry="5" transform="rotate(120,46,50)"/><ellipse cx="46" cy="50" rx="2" ry="5" transform="rotate(180,46,50)"/>
+  <ellipse cx="46" cy="50" rx="2" ry="5" transform="rotate(240,46,50)"/><ellipse cx="46" cy="50" rx="2" ry="5" transform="rotate(300,46,50)"/>
+  <circle cx="46" cy="50" r="1.8" fill="rgba(255,245,200,.85)"/>
+</g>
+<g fill="rgba(240,230,180,.45)">
+  <ellipse cx="194" cy="50" rx="2" ry="5"/><ellipse cx="194" cy="50" rx="2" ry="5" transform="rotate(60,194,50)"/>
+  <ellipse cx="194" cy="50" rx="2" ry="5" transform="rotate(120,194,50)"/><ellipse cx="194" cy="50" rx="2" ry="5" transform="rotate(180,194,50)"/>
+  <circle cx="194" cy="50" r="1.8" fill="rgba(255,245,200,.85)"/>
+</g>
+<g fill="rgba(240,230,180,.42)"><ellipse cx="46" cy="340" rx="2" ry="5"/><ellipse cx="46" cy="340" rx="2" ry="5" transform="rotate(60,46,340)"/><ellipse cx="46" cy="340" rx="2" ry="5" transform="rotate(120,46,340)"/><circle cx="46" cy="340" r="1.8" fill="rgba(255,245,200,.85)"/></g>
+<g fill="rgba(240,230,180,.42)"><ellipse cx="194" cy="340" rx="2" ry="5"/><ellipse cx="194" cy="340" rx="2" ry="5" transform="rotate(60,194,340)"/><ellipse cx="194" cy="340" rx="2" ry="5" transform="rotate(120,194,340)"/><circle cx="194" cy="340" r="1.8" fill="rgba(255,245,200,.85)"/></g>
+<g fill="rgba(240,230,180,.30)">
+  <circle cx="46" cy="170" r="1.5"/><circle cx="194" cy="170" r="1.5"/>
+  <circle cx="46" cy="254" r="1.5"/><circle cx="194" cy="254" r="1.5"/>
+  <circle cx="120" cy="36" r="1.2"/><circle cx="120" cy="356" r="1.2"/>
+</g>
+<!-- Central medallion -->
+<circle cx="120" cy="194" r="58" fill="none" stroke="#c9a040" stroke-width=".5" stroke-opacity=".38" stroke-dasharray="4 2.5"/>
+<circle cx="120" cy="194" r="52" fill="none" stroke="#c9a040" stroke-width="1.4" stroke-opacity=".84"/>
+<circle cx="120" cy="194" r="40" fill="none" stroke="#c9a040" stroke-width="1.1" stroke-opacity=".78"/>
+<circle cx="120" cy="194" r="40" fill="#0e0900" fill-opacity=".65"/>
+<circle cx="120" cy="194" r="33" fill="none" stroke="#c9a040" stroke-width=".4" stroke-opacity=".48"/>
+<!-- Tarot symbols in ring -->
+<g fill="none" stroke="#c9a040" stroke-width=".6" stroke-opacity=".55">
+  <circle cx="166" cy="194" r="6.5"/><circle cx="153" cy="227" r="6.5"/><circle cx="120" cy="240" r="6.5"/>
+  <circle cx="87" cy="227" r="6.5"/><circle cx="74" cy="194" r="6.5"/><circle cx="87" cy="161" r="6.5"/>
+  <circle cx="120" cy="148" r="6.5"/><circle cx="153" cy="161" r="6.5"/>
+</g>
+<g font-size="8.5" text-anchor="middle" dominant-baseline="middle" fill="#c9a040" fill-opacity=".78" font-family="serif">
+  <text x="166" y="194">♆</text><text x="153" y="227">✦</text>
+  <text x="120" y="240">✕</text><text x="87" y="227">⊕</text>
+  <text x="74" y="194">♆</text><text x="87" y="161">✦</text>
+  <text x="120" y="148">✕</text><text x="153" y="161">⊕</text>
+</g>
+<!-- LUNA in blackletter (UnifrakturMaguntia) -->
+<text x="120" y="200" text-anchor="middle" dominant-baseline="middle"
+      font-size="26" fill="#c9a040" fill-opacity=".94"
+      font-family="UnifrakturMaguntia, Cormorant Garamond, serif">LUNA</text>
+<!-- Inner floral -->
+<g stroke="#c9a040" stroke-opacity=".35" stroke-width=".8" fill="none" stroke-linecap="round">
+  <path d="M 100,185 C 96,178 98,172 103,170 C 108,168 112,172 110,178"/>
+  <path d="M 140,203 C 144,210 142,216 137,218 C 132,220 128,216 130,210"/>
+</g>
+<g fill="#c9a040" fill-opacity=".62">
+  <circle cx="120" cy="141" r="2.8"/><circle cx="120" cy="247" r="2.8"/>
+  <circle cx="67" cy="194" r="2"/><circle cx="173" cy="194" r="2"/>
+</g>
+<!-- CREASE marks (heavy — 100% worn card) -->
+<line x1="170" y1="5" x2="25" y2="210" stroke="rgba(255,220,140,.13)" stroke-width="18"/>
+<line x1="15" y1="270" x2="215" y2="388" stroke="rgba(255,220,140,.09)" stroke-width="14"/>
+<line x1="0" y1="185" x2="240" y2="198" stroke="rgba(255,220,140,.06)" stroke-width="9"/>
+<line x1="55" y1="0" x2="80" y2="388" stroke="rgba(255,220,140,.04)" stroke-width="7"/>
+<line x1="0" y1="80" x2="240" y2="95" stroke="rgba(255,220,140,.04)" stroke-width="6"/>
+<!-- Craquelure lines (golden hairline cracks) -->
+<g stroke="rgba(200,170,60,.20)" stroke-width=".6" fill="none" stroke-linecap="round">
+  <path d="M 60,34 L 65,62 L 76,74 M 60,34 L 94,65 L 100,88 M 60,34 L 23,34 L 6,20"/>
+  <path d="M 175,85 L 162,110 L 148,120 M 175,85 L 190,100 L 205,95"/>
+  <path d="M 45,180 L 58,196 L 52,215 M 45,180 L 30,175 L 18,182"/>
+  <path d="M 195,220 L 182,240 L 188,258 M 195,220 L 210,215"/>
+  <path d="M 120,310 L 110,328 L 118,345 M 120,310 L 132,325 L 140,318"/>
+  <path d="M 80,140 L 95,155 L 88,170 M 80,140 L 68,148"/>
+  <path d="M 165,300 L 178,318 L 172,335 M 165,300 L 155,308"/>
+  <path d="M 32,280 L 45,295 L 38,312 M 32,280 L 22,270"/>
+  <path d="M 208,145 L 195,160 L 202,178"/>
+  <path d="M 142,55 L 130,68 L 136,82 M 142,55 L 155,62"/>
+</g>
+<!-- Fine scratches (more for 100% worn) -->
+<g stroke="rgba(220,190,80,.24)" stroke-linecap="round" stroke-width=".5">
+  <line x1="38" y1="118" x2="55" y2="121"/><line x1="186" y1="286" x2="205" y2="290"/>
+  <line x1="105" y1="338" x2="125" y2="341"/><line x1="22" y1="58" x2="38" y2="55"/>
+  <line x1="200" y1="145" x2="218" y2="143"/><line x1="155" y1="200" x2="172" y2="204"/>
+  <line x1="45" y1="240" x2="62" y2="237"/><line x1="190" y1="60" x2="208" y2="62"/>
+  <line x1="30" y1="180" x2="44" y2="177"/><line x1="130" y1="30" x2="148" y2="33"/>
+  <line x1="85" y1="355" x2="102" y2="358"/><line x1="175" y1="22" x2="190" y2="20"/>
+</g>
+<!-- Watermark -->
+<text x="120" y="368" text-anchor="middle" font-size="8" fill="#c9a040" fill-opacity=".45"
+      font-family="Cinzel Decorative, serif" letter-spacing="5">LUNA TAROT</text>
+<!-- Grain filter -->
+<rect width="240" height="388" rx="12" fill="rgba(200,160,60,.03)" filter="url(#b-f)"/>
+<!-- Vignette (strong — blends into page) -->
+<rect width="240" height="388" rx="12" fill="url(#b-vig)"/>
+</svg>
+</div>
+
+<!-- ══ FACE: The Hermit IX — warm amber atmosphere ══ -->
+<div class="hc-side hc-face">
+<svg width="240" height="388" viewBox="0 0 240 388" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <!-- WARM amber illustration background (like aged parchment + candlelight, not cold blue) -->
+  <radialGradient id="f-ill" cx="50%" cy="55%" r="65%" gradientUnits="objectBoundingBox">
+    <stop offset="0%" stop-color="#4a3000"/>
+    <stop offset="40%" stop-color="#2a1800"/>
+    <stop offset="80%" stop-color="#120a00"/>
+    <stop offset="100%" stop-color="#060200"/>
+  </radialGradient>
+  <!-- Lantern warm glow -->
+  <radialGradient id="f-glow" cx="50%" cy="50%" r="50%">
+    <stop offset="0%" stop-color="rgba(255,215,80,.90)"/>
+    <stop offset="40%" stop-color="rgba(255,140,20,.40)"/>
+    <stop offset="100%" stop-color="rgba(255,80,0,0)"/>
+  </radialGradient>
+  <!-- Strong vignette -->
+  <radialGradient id="f-vig" cx="50%" cy="48%" r="55%">
+    <stop offset="0%" stop-color="rgba(0,0,0,0)"/>
+    <stop offset="72%" stop-color="rgba(3,1,0,.50)"/>
+    <stop offset="100%" stop-color="rgba(3,1,0,.82)"/>
+  </radialGradient>
+  <!-- Warm worn filter -->
+  <filter id="f-noise" x="-2%" y="-2%" width="104%" height="104%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.64" numOctaves="4" seed="19" result="grain"/>
+    <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0.12 0 0 0 0 0.08 0 0 0 0 0 0 0 0 0.30 0" result="g2"/>
+    <feBlend in="SourceGraphic" in2="g2" mode="multiply"/>
+  </filter>
+  <symbol id="f-fl" overflow="visible">
+    <ellipse rx="2" ry="5" fill-opacity=".62"/><ellipse rx="2" ry="5" transform="rotate(60)" fill-opacity=".56"/>
+    <ellipse rx="2" ry="5" transform="rotate(120)" fill-opacity=".62"/><ellipse rx="2" ry="5" transform="rotate(180)" fill-opacity=".56"/>
+    <ellipse rx="2" ry="5" transform="rotate(240)" fill-opacity=".62"/><ellipse rx="2" ry="5" transform="rotate(300)" fill-opacity=".56"/>
+  </symbol>
+</defs>
+<rect width="240" height="388" rx="12" fill="#07040a"/>
+<!-- Outer border -->
+<rect width="240" height="388" rx="12" fill="none" stroke="#c9a040" stroke-width="1.6" stroke-opacity=".85"/>
+<rect x="4" y="4" width="232" height="380" rx="9" fill="none" stroke="#c9a040" stroke-width=".5" stroke-opacity=".35"/>
+<!-- Dog-ear worn corners on face too -->
+<polygon points="5,5 5,36 36,5" fill="rgba(210,180,80,.20)"/>
+<polygon points="235,383 235,352 204,383" fill="rgba(210,180,80,.16)"/>
+<!-- TOP STRIP -->
+<rect x="4" y="4" width="232" height="36" rx="9" fill="#060300" fill-opacity=".97"/>
+<line x1="4" y1="40" x2="236" y2="40" stroke="#c9a040" stroke-width="1.4" stroke-opacity=".88"/>
+<line x1="4" y1="8" x2="236" y2="8" stroke="#c9a040" stroke-width=".5" stroke-opacity=".38"/>
+<!-- IX in Cinzel Decorative -->
+<text x="120" y="24" text-anchor="middle" dominant-baseline="middle"
+      font-size="15" fill="#c9a040" fill-opacity=".92"
+      font-family="Cinzel Decorative, serif" letter-spacing="4">IX</text>
+<!-- Scrollwork left -->
+<path d="M 20,22 C 38,14 58,20 78,18 C 90,16 100,20 108,22" fill="none" stroke="#c9a040" stroke-width="1" stroke-opacity=".62" stroke-linecap="round"/>
+<path d="M 42,18 C 48,11 56,11 62,18" fill="none" stroke="#c9a040" stroke-width=".65" stroke-opacity=".48"/>
+<use href="#f-fl" x="52" y="16" fill="#c9a040"/><circle cx="52" cy="16" r="1.6" fill="#060300"/>
+<!-- Scrollwork right -->
+<path d="M 220,22 C 202,14 182,20 162,18 C 150,16 140,20 132,22" fill="none" stroke="#c9a040" stroke-width="1" stroke-opacity=".62" stroke-linecap="round"/>
+<path d="M 198,18 C 192,11 184,11 178,18" fill="none" stroke="#c9a040" stroke-width=".65" stroke-opacity=".48"/>
+<use href="#f-fl" x="188" y="16" fill="#c9a040"/><circle cx="188" cy="16" r="1.6" fill="#060300"/>
+<!-- BOTTOM STRIP -->
+<rect x="4" y="348" width="232" height="36" rx="0" fill="#060300" fill-opacity=".98"/>
+<line x1="4" y1="348" x2="236" y2="348" stroke="#c9a040" stroke-width="1.4" stroke-opacity=".88"/>
+<polygon points="120,349 123,354 120,359 117,354" fill="#c9a040" fill-opacity=".6"/>
+<text x="120" y="366" text-anchor="middle" dominant-baseline="middle"
+      font-size="14.5" fill="#c9a040" fill-opacity=".90"
+      font-family="Cormorant Garamond, serif" letter-spacing="4" font-weight="600">ОТШЕЛЬНИК</text>
+<text x="120" y="379" text-anchor="middle" dominant-baseline="middle"
+      font-size="8" fill="#c9a040" fill-opacity=".50"
+      font-family="Cinzel Decorative, serif" letter-spacing="3">THE HERMIT</text>
+<!-- ILLUSTRATION AREA — WARM AMBER ATMOSPHERE -->
+<rect x="4" y="40" width="232" height="308" fill="url(#f-ill)"/>
+<!-- Stars (amber-tinted in warm atmosphere) -->
+<g fill="rgba(255,220,140,.60)">
+  <circle cx="32" cy="62" r="1.3"/><circle cx="60" cy="52" r=".9"/>
+  <circle cx="95" cy="68" r="1.1"/><circle cx="52" cy="88" r=".8"/>
+  <circle cx="192" cy="56" r="1.2"/><circle cx="210" cy="82" r=".9"/>
+  <circle cx="182" cy="98" r="1"/><circle cx="28" cy="132" r="1"/>
+  <circle cx="148" cy="58" r=".9"/><circle cx="22" cy="100" r=".8"/>
+</g>
+<!-- 6-pointed guiding star — warm golden -->
+<g transform="translate(180,106)">
+  <polygon points="0,-18 15.6,9 -15.6,9" fill="none" stroke="#d4a030" stroke-width="1.3" stroke-opacity=".90"/>
+  <polygon points="0,18 15.6,-9 -15.6,-9" fill="none" stroke="#d4a030" stroke-width="1.3" stroke-opacity=".90"/>
+  <circle r="3.5" fill="#d4a030" fill-opacity=".85"/>
+</g>
+<g stroke="#d4a030" stroke-opacity=".42" stroke-width=".8" stroke-linecap="round">
+  <line x1="180" y1="80" x2="180" y2="128"/><line x1="154" y1="106" x2="206" y2="106"/>
+  <line x1="162" y1="88" x2="198" y2="124"/><line x1="198" y1="88" x2="162" y2="124"/>
+</g>
+<!-- Mountain silhouette (warm dark amber-brown) -->
+<polygon points="4,335 35,295 65,315 95,278 125,300 158,268 192,290 220,268 236,285 236,348 4,348" fill="#100800"/>
+<polygon points="4,348 55,318 80,332 106,285 128,300 172,318 208,300 236,322 236,348" fill="#0b0500"/>
+<polygon points="95,292 108,274 122,290" fill="#180e00"/>
+<!-- Warm snow/frost hints on peaks -->
+<polygon points="108,274 115,284 101,284" fill="rgba(200,160,80,.18)"/>
+<polygon points="200,295 207,305 193,305" fill="rgba(200,160,80,.14)"/>
+<!-- Lantern glow (larger, warmer) -->
+<circle cx="95" cy="252" r="60" fill="url(#f-glow)"/>
+<circle cx="95" cy="252" r="30" fill="url(#f-glow)"/>
+<!-- Robe -->
+<polygon points="102,278 116,278 124,322 90,322" fill="#1a0e00"/>
+<line x1="102" y1="278" x2="90" y2="322" stroke="rgba(200,150,50,.14)" stroke-width="1.2"/>
+<line x1="108" y1="280" x2="104" y2="322" stroke="rgba(0,0,0,.28)" stroke-width="1"/>
+<!-- Body -->
+<ellipse cx="109" cy="270" rx="9" ry="12" fill="#1a0e00"/>
+<!-- Hood -->
+<ellipse cx="111" cy="260" rx="12" ry="14" fill="#160a00"/>
+<ellipse cx="113" cy="262" rx="8.5" ry="10" fill="#0e0600"/>
+<!-- Face (warm skin tone) -->
+<ellipse cx="113" cy="263" rx="5.5" ry="6.5" fill="#8a5520"/>
+<ellipse cx="110.5" cy="261" rx="2.2" ry="1.8" fill="#5a3008" fill-opacity=".75"/>
+<circle cx="110" cy="260.5" r=".7" fill="rgba(255,210,80,.55)"/>
+<!-- Beard (warm white) -->
+<path d="M 107,268 C 105,275 104,283 106,292 C 108,301 110,307 107,316 C 105,322 104,326 106,330" fill="none" stroke="rgba(230,215,180,.75)" stroke-width="3.5" stroke-linecap="round"/>
+<path d="M 113,268 C 115,277 116,286 114,295 C 112,304 111,310 113,318" fill="none" stroke="rgba(230,215,180,.58)" stroke-width="2.8" stroke-linecap="round"/>
+<!-- Staff -->
+<path d="M 120,273 C 126,288 132,305 138,322" stroke="#7a4a10" stroke-width="3.2" fill="none" stroke-linecap="round"/>
+<circle cx="120" cy="273" r="3" fill="#9a6025"/>
+<!-- Left arm + lantern -->
+<path d="M 104,275 C 100,268 96,260 93,255" stroke="#160a00" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+<ellipse cx="93" cy="255" rx="4" ry="3" fill="#100600"/>
+<!-- Lantern body -->
+<line x1="93" y1="240" x2="93" y2="248" stroke="#8a6010" stroke-width="1" stroke-linecap="round"/>
+<polygon points="87,248 93,240 99,248" fill="#b87808"/>
+<rect x="87" y="248" width="12" height="18" rx="2" fill="#d08808"/>
+<rect x="88.5" y="249.5" width="9" height="15" rx="1.5" fill="rgba(255,240,100,.60)"/>
+<line x1="93" y1="248" x2="93" y2="266" stroke="#b87808" stroke-width=".8" stroke-opacity=".7"/>
+<line x1="87" y1="257" x2="99" y2="257" stroke="#b87808" stroke-width=".8" stroke-opacity=".7"/>
+<line x1="93" y1="266" x2="93" y2="272" stroke="#b87808" stroke-width="1.4" stroke-linecap="round"/>
+<path d="M 90,248 Q 93,244 96,248" fill="none" stroke="#9a6010" stroke-width="1.2" stroke-linecap="round"/>
+<!-- Cloak -->
+<path d="M 116,280 C 121,292 124,308 126,320" fill="none" stroke="#240e00" stroke-width="3" stroke-linecap="round"/>
+<!-- Illustration border -->
+<rect x="4" y="40" width="232" height="308" fill="none" stroke="#c9a040" stroke-width=".65" stroke-opacity=".55"/>
+<!-- CREASE marks on face -->
+<line x1="40" y1="42" x2="12" y2="348" stroke="rgba(255,200,80,.09)" stroke-width="14"/>
+<line x1="185" y1="40" x2="234" y2="260" stroke="rgba(255,200,80,.07)" stroke-width="10"/>
+<line x1="0" y1="180" x2="240" y2="195" stroke="rgba(255,200,80,.05)" stroke-width="7"/>
+<line x1="100" y1="40" x2="120" y2="348" stroke="rgba(255,200,80,.03)" stroke-width="6"/>
+<!-- Craquelure (golden cracks) on face -->
+<g stroke="rgba(200,160,50,.18)" stroke-width=".55" fill="none" stroke-linecap="round">
+  <path d="M 63,101 L 24,97 L 7,101 M 63,101 L 79,137 L 97,148 M 63,101 L 20,110"/>
+  <path d="M 150,200 L 165,218 L 158,235 M 165,218 L 180,212"/>
+  <path d="M 28,180 L 44,196 L 38,214 M 28,180 L 16,172"/>
+  <path d="M 195,120 L 180,138 L 186,155 M 195,120 L 208,115"/>
+  <path d="M 90,290 L 102,308 L 96,324 M 102,308 L 118,302"/>
+  <path d="M 40,65 L 55,80 L 48,96 M 40,65 L 28,58"/>
+  <path d="M 185,280 L 198,295 L 192,312"/>
+</g>
+<!-- Fine scratches -->
+<g stroke="rgba(210,175,60,.22)" stroke-linecap="round" stroke-width=".45">
+  <line x1="28" y1="122" x2="44" y2="124"/><line x1="192" y1="306" x2="212" y2="309"/>
+  <line x1="80" y1="258" x2="92" y2="256"/><line x1="155" y1="85" x2="170" y2="82"/>
+  <line x1="30" y1="200" x2="45" y2="198"/><line x1="200" y1="175" x2="218" y2="178"/>
+</g>
+<!-- Warm grain filter -->
+<rect x="4" y="40" width="232" height="308" fill="rgba(180,120,30,.03)" filter="url(#f-noise)"/>
+<!-- Strong vignette (illustration bleeds into card edges) -->
+<rect x="4" y="40" width="232" height="308" fill="url(#f-vig)"/>
+</svg>
+</div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SAMPLE READING — 3 SVG tarot cards -->
+<section class="content reading-section" id="reading">
+  <div class="section-title">Пример расклада</div>
+  <div class="section-sub">Три карты — прошлое, настоящее и будущее</div>
+  <div class="cards-row">
+
+    <!-- ЛУНА / XVIII / THE MOON -->
+    <div class="card-slot">
+<svg width="124" height="200" viewBox="0 0 124 200" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <radialGradient id="m-bg" cx="62" cy="95" r="90" gradientUnits="userSpaceOnUse">
+    <stop offset="0%" stop-color="#1a1000"/><stop offset="50%" stop-color="#0e0800"/><stop offset="100%" stop-color="#030200"/>
+  </radialGradient>
+  <radialGradient id="m-vig" cx="50%" cy="50%" r="52%">
+    <stop offset="0%" stop-color="rgba(0,0,0,0)"/><stop offset="78%" stop-color="rgba(2,1,0,.52)"/><stop offset="100%" stop-color="rgba(2,1,0,.85)"/>
+  </radialGradient>
+  <filter id="m-f"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" seed="7" result="g"/>
+    <feColorMatrix in="g" type="matrix" values="0 0 0 0 0.12 0 0 0 0 0.08 0 0 0 0 0 0 0 0 0.30 0" result="g2"/>
+    <feBlend in="SourceGraphic" in2="g2" mode="multiply"/></filter>
+</defs>
+<rect width="124" height="200" rx="8" fill="#030200"/>
+<rect width="124" height="200" rx="8" fill="none" stroke="#c9a040" stroke-width="1.2" stroke-opacity=".85"/>
+<rect x="3" y="3" width="118" height="194" rx="6" fill="none" stroke="#c9a040" stroke-width=".4" stroke-opacity=".35"/>
+<!-- Dog-ears -->
+<polygon points="3,3 3,22 22,3" fill="rgba(210,180,80,.22)"/>
+<polygon points="121,197 121,178 102,197" fill="rgba(210,180,80,.18)"/>
+<!-- Top strip -->
+<rect x="3" y="3" width="118" height="22" rx="6" fill="#020100" fill-opacity=".98"/>
+<line x1="3" y1="25" x2="121" y2="25" stroke="#c9a040" stroke-width=".9" stroke-opacity=".85"/>
+<text x="62" y="15" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="#c9a040" fill-opacity=".90" font-family="Cinzel Decorative, serif" letter-spacing="2">XVIII</text>
+<!-- Illustration -->
+<rect x="3" y="25" width="118" height="152" fill="url(#m-bg)"/>
+<!-- Moon (large golden, warm tint) -->
+<circle cx="62" cy="60" r="26" fill="#2a1e00"/>
+<circle cx="62" cy="60" r="26" fill="none" stroke="#c9a040" stroke-width=".7" stroke-opacity=".65"/>
+<circle cx="70" cy="57" r="20" fill="#1a1200"/> <!-- crescent shadow -->
+<circle cx="62" cy="60" r="28" fill="rgba(180,130,0,.12)"/> <!-- glow -->
+<!-- Moon face subtle suggestion -->
+<ellipse cx="57" cy="58" rx="2.5" ry="2" fill="rgba(180,130,20,.4)"/>
+<ellipse cx="65" cy="58" rx="2.5" ry="2" fill="rgba(180,130,20,.4)"/>
+<path d="M 56,65 Q 62,69 68,65" fill="none" stroke="rgba(180,130,20,.4)" stroke-width=".8"/>
+<!-- Left tower (dark warm) -->
+<rect x="12" y="115" width="12" height="52" fill="#0e0800"/>
+<rect x="10" y="111" width="16" height="7" fill="#0e0800"/>
+<rect x="10" y="111" width="4" height="4" fill="#080500"/>
+<rect x="17" y="111" width="4" height="4" fill="#080500"/>
+<rect x="16" y="125" width="4" height="7" fill="rgba(60,40,0,.5)"/>
+<!-- Right tower -->
+<rect x="100" y="115" width="12" height="52" fill="#0e0800"/>
+<rect x="98" y="111" width="16" height="7" fill="#0e0800"/>
+<rect x="98" y="111" width="4" height="4" fill="#080500"/>
+<rect x="105" y="111" width="4" height="4" fill="#080500"/>
+<rect x="104" y="125" width="4" height="7" fill="rgba(60,40,0,.5)"/>
+<!-- Path between towers -->
+<path d="M 44,176 L 50,112 L 74,112 L 80,176" fill="#120c00"/>
+<!-- Water at bottom -->
+<rect x="3" y="155" width="118" height="22" fill="#0a0800"/>
+<path d="M 3,157 Q 20,153 37,159 Q 54,164 71,159 Q 88,153 105,159 Q 115,162 121,159" fill="none" stroke="#1a1200" stroke-width="1"/>
+<path d="M 3,162 Q 20,158 37,164 Q 54,168 71,164 Q 88,158 105,164 Q 115,167 121,164" fill="none" stroke="#140f00" stroke-width=".7"/>
+<!-- Wolf silhouette left -->
+<path d="M 26,155 C 23,148 21,145 25,143 C 29,141 31,143 33,147 C 35,151 33,155 35,153 L 30,157 Z" fill="#080500"/>
+<!-- Dog silhouette right -->
+<path d="M 86,155 C 83,148 81,145 85,143 C 89,141 91,143 93,147 C 95,151 93,155 95,153 L 90,157 Z" fill="#060400"/>
+<!-- Bottom strip -->
+<rect x="3" y="177" width="118" height="20" rx="0" fill="#020100" fill-opacity=".98"/>
+<line x1="3" y1="177" x2="121" y2="177" stroke="#c9a040" stroke-width=".9" stroke-opacity=".85"/>
+<text x="62" y="188" text-anchor="middle" dominant-baseline="middle" font-size="9.5" fill="#c9a040" fill-opacity=".88" font-family="Cormorant Garamond, serif" letter-spacing="2.5" font-weight="600">ЛУНА</text>
+<!-- Illustration border -->
+<rect x="3" y="25" width="118" height="152" fill="none" stroke="#c9a040" stroke-width=".5" stroke-opacity=".45"/>
+<!-- Crease marks -->
+<line x1="88" y1="25" x2="10" y2="177" stroke="rgba(255,200,80,.09)" stroke-width="9"/>
+<line x1="10" y1="120" x2="118" y2="177" stroke="rgba(255,200,80,.06)" stroke-width="7"/>
+<!-- Craquelure -->
+<g stroke="rgba(190,150,40,.18)" stroke-width=".5" fill="none" stroke-linecap="round">
+  <path d="M 28,88 L 38,102 L 57,119 M 28,88 L 10,82 L -9,80"/>
+  <path d="M 85,55 L 98,68 L 92,82 M 85,55 L 98,50"/>
+  <path d="M 40,140 L 52,155 L 46,168 M 52,155 L 65,150"/>
+</g>
+<g stroke="rgba(200,160,50,.22)" stroke-linecap="round" stroke-width=".45">
+  <line x1="15" y1="70" x2="28" y2="73"/><line x1="92" y1="142" x2="108" y2="145"/>
+  <line x1="45" y1="165" x2="60" y2="168"/><line x1="80" y1="35" x2="95" y2="33"/>
+</g>
+<rect x="3" y="25" width="118" height="152" fill="rgba(160,100,20,.025)" filter="url(#m-f)"/>
+<rect x="3" y="25" width="118" height="152" fill="url(#m-vig)"/>
+</svg>
+      <span class="card-pos">Прошлое</span>
+    </div>
+
+    <!-- ВЛЮБЛЁННЫЕ / VI / THE LOVERS -->
+    <div class="card-slot">
+<svg width="142" height="228" viewBox="0 0 142 228" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <radialGradient id="l-bg" cx="71" cy="100" r="105" gradientUnits="userSpaceOnUse">
+    <stop offset="0%" stop-color="#6a4200"/><stop offset="45%" stop-color="#3a2400"/><stop offset="85%" stop-color="#1a0e00"/><stop offset="100%" stop-color="#060300"/>
+  </radialGradient>
+  <radialGradient id="l-vig" cx="50%" cy="50%" r="52%">
+    <stop offset="0%" stop-color="rgba(0,0,0,0)"/><stop offset="75%" stop-color="rgba(3,1,0,.50)"/><stop offset="100%" stop-color="rgba(3,1,0,.85)"/>
+  </radialGradient>
+  <filter id="l-f"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" seed="9" result="g"/>
+    <feColorMatrix in="g" type="matrix" values="0 0 0 0 0.12 0 0 0 0 0.08 0 0 0 0 0 0 0 0 0.28 0" result="g2"/>
+    <feBlend in="SourceGraphic" in2="g2" mode="multiply"/></filter>
+</defs>
+<rect width="142" height="228" rx="8" fill="#060300"/>
+<rect width="142" height="228" rx="8" fill="none" stroke="#c9a040" stroke-width="1.3" stroke-opacity=".85"/>
+<rect x="3" y="3" width="136" height="222" rx="6" fill="none" stroke="#c9a040" stroke-width=".4" stroke-opacity=".35"/>
+<!-- Dog-ears -->
+<polygon points="3,3 3,24 24,3" fill="rgba(210,180,80,.22)"/>
+<polygon points="139,225 139,204 118,225" fill="rgba(210,180,80,.18)"/>
+<!-- Top strip -->
+<rect x="3" y="3" width="136" height="24" rx="6" fill="#040200" fill-opacity=".98"/>
+<line x1="3" y1="27" x2="139" y2="27" stroke="#c9a040" stroke-width=".9" stroke-opacity=".85"/>
+<text x="71" y="16" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="#c9a040" fill-opacity=".90" font-family="Cinzel Decorative, serif" letter-spacing="2">VI</text>
+<!-- Illustration -->
+<rect x="3" y="27" width="136" height="172" fill="url(#l-bg)"/>
+<!-- Sun (radiant, upper center) -->
+<circle cx="71" cy="55" r="18" fill="#c08000" fill-opacity=".90"/>
+<circle cx="71" cy="55" r="22" fill="none" stroke="#c9a040" stroke-width=".6" stroke-opacity=".65"/>
+<!-- Sun face -->
+<ellipse cx="67" cy="53" rx="2.5" ry="2" fill="#8a5000" fill-opacity=".7"/>
+<ellipse cx="75" cy="53" rx="2.5" ry="2" fill="#8a5000" fill-opacity=".7"/>
+<path d="M 66,60 Q 71,64 76,60" fill="none" stroke="#8a5000" stroke-width=".9" stroke-opacity=".7"/>
+<!-- Sun rays -->
+<g stroke="#c9a040" stroke-width="1.2" stroke-opacity=".55" stroke-linecap="round">
+  <line x1="71" y1="28" x2="71" y2="22"/><line x1="71" y1="82" x2="71" y2="88"/>
+  <line x1="44" y1="55" x2="38" y2="55"/><line x1="98" y1="55" x2="104" y2="55"/>
+  <line x1="52" y1="36" x2="47" y2="31"/><line x1="90" y1="74" x2="95" y2="79"/>
+  <line x1="90" y1="36" x2="95" y2="31"/><line x1="52" y1="74" x2="47" y2="79"/>
+</g>
+<!-- Angel/cherub above figures (wings + body) -->
+<ellipse cx="71" cy="100" rx="8" ry="10" fill="#2a1800"/>
+<path d="M 63,97 C 50,88 42,95 46,104 C 50,113 60,108 63,104" fill="#2a1800" fill-opacity=".8"/>
+<path d="M 79,97 C 92,88 100,95 96,104 C 92,113 82,108 79,104" fill="#2a1800" fill-opacity=".8"/>
+<ellipse cx="71" cy="98" rx="5" ry="6" fill="#3a2200"/>
+<!-- Flames/glow from angel -->
+<circle cx="71" cy="100" r="15" fill="rgba(180,100,0,.18)"/>
+<!-- Figure left (Adam) -->
+<ellipse cx="40" cy="148" rx="7" ry="9" fill="#1e1000"/>
+<line x1="40" y1="157" x2="40" y2="185" stroke="#1e1000" stroke-width="6" stroke-linecap="round"/>
+<line x1="40" y1="165" x2="32" y2="172" stroke="#1e1000" stroke-width="3" stroke-linecap="round"/>
+<line x1="40" y1="165" x2="48" y2="172" stroke="#1e1000" stroke-width="3" stroke-linecap="round"/>
+<!-- Figure right (Eve) -->
+<ellipse cx="102" cy="148" rx="7" ry="9" fill="#1e1000"/>
+<line x1="102" y1="157" x2="102" y2="185" stroke="#1e1000" stroke-width="6" stroke-linecap="round"/>
+<line x1="102" y1="165" x2="94" y2="172" stroke="#1e1000" stroke-width="3" stroke-linecap="round"/>
+<line x1="102" y1="165" x2="110" y2="172" stroke="#1e1000" stroke-width="3" stroke-linecap="round"/>
+<!-- Mountain behind left figure -->
+<polygon points="20,185 36,158 52,185" fill="#180c00"/>
+<!-- Tree behind right figure (with serpent) -->
+<line x1="112" y1="185" x2="112" y2="145" stroke="#1a0c00" stroke-width="3"/>
+<circle cx="112" cy="142" r="8" fill="#1a0c00" fill-opacity=".7"/>
+<!-- Ground line -->
+<line x1="3" y1="185" x2="139" y2="185" stroke="#2a1800" stroke-width="1"/>
+<!-- Bottom strip -->
+<rect x="3" y="199" width="136" height="26" rx="0" fill="#030100" fill-opacity=".98"/>
+<line x1="3" y1="199" x2="139" y2="199" stroke="#c9a040" stroke-width=".9" stroke-opacity=".85"/>
+<text x="71" y="212" text-anchor="middle" dominant-baseline="middle" font-size="10.5" fill="#c9a040" fill-opacity=".88" font-family="Cormorant Garamond, serif" letter-spacing="2.5" font-weight="600">ВЛЮБЛЁННЫЕ</text>
+<text x="71" y="222" text-anchor="middle" dominant-baseline="middle" font-size="7" fill="#c9a040" fill-opacity=".48" font-family="Cinzel Decorative, serif" letter-spacing="2">THE LOVERS</text>
+<!-- Illustration border -->
+<rect x="3" y="27" width="136" height="172" fill="none" stroke="#c9a040" stroke-width=".5" stroke-opacity=".45"/>
+<!-- Creases -->
+<line x1="100" y1="27" x2="12" y2="199" stroke="rgba(255,200,80,.09)" stroke-width="10"/>
+<line x1="10" y1="140" x2="136" y2="199" stroke="rgba(255,200,80,.06)" stroke-width="8"/>
+<line x1="0" y1="120" x2="142" y2="135" stroke="rgba(255,200,80,.04)" stroke-width="6"/>
+<!-- Craquelure -->
+<g stroke="rgba(190,150,40,.18)" stroke-width=".5" fill="none" stroke-linecap="round">
+  <path d="M 35,55 L 48,70 L 42,85 M 35,55 L 22,48"/>
+  <path d="M 108,90 L 120,105 L 114,120 M 108,90 L 122,85"/>
+  <path d="M 60,155 L 72,168 L 66,182 M 72,168 L 85,162"/>
+</g>
+<g stroke="rgba(200,160,50,.22)" stroke-linecap="round" stroke-width=".45">
+  <line x1="18" y1="80" x2="32" y2="83"/><line x1="110" y1="160" x2="128" y2="163"/>
+  <line x1="50" y1="190" x2="68" y2="193"/><line x1="95" y1="35" x2="112" y2="33"/>
+</g>
+<rect x="3" y="27" width="136" height="172" fill="rgba(160,100,20,.025)" filter="url(#l-f)"/>
+<rect x="3" y="27" width="136" height="172" fill="url(#l-vig)"/>
+</svg>
+      <span class="card-pos">Настоящее</span>
+    </div>
+
+    <!-- ЗВЕЗДА / XVII / THE STAR -->
+    <div class="card-slot">
+<svg width="124" height="200" viewBox="0 0 124 200" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <radialGradient id="s-bg" cx="62" cy="85" r="90" gradientUnits="userSpaceOnUse">
+    <stop offset="0%" stop-color="#221500"/><stop offset="50%" stop-color="#120c00"/><stop offset="100%" stop-color="#040200"/>
+  </radialGradient>
+  <radialGradient id="s-vig" cx="50%" cy="50%" r="52%">
+    <stop offset="0%" stop-color="rgba(0,0,0,0)"/><stop offset="78%" stop-color="rgba(2,1,0,.52)"/><stop offset="100%" stop-color="rgba(2,1,0,.85)"/>
+  </radialGradient>
+  <filter id="s-f"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" seed="11" result="g"/>
+    <feColorMatrix in="g" type="matrix" values="0 0 0 0 0.12 0 0 0 0 0.08 0 0 0 0 0 0 0 0 0.30 0" result="g2"/>
+    <feBlend in="SourceGraphic" in2="g2" mode="multiply"/></filter>
+</defs>
+<rect width="124" height="200" rx="8" fill="#030200"/>
+<rect width="124" height="200" rx="8" fill="none" stroke="#c9a040" stroke-width="1.2" stroke-opacity=".85"/>
+<rect x="3" y="3" width="118" height="194" rx="6" fill="none" stroke="#c9a040" stroke-width=".4" stroke-opacity=".35"/>
+<!-- Dog-ears -->
+<polygon points="3,3 3,22 22,3" fill="rgba(210,180,80,.22)"/>
+<polygon points="121,197 121,178 102,197" fill="rgba(210,180,80,.18)"/>
+<!-- Top strip -->
+<rect x="3" y="3" width="118" height="22" rx="6" fill="#020100" fill-opacity=".98"/>
+<line x1="3" y1="25" x2="121" y2="25" stroke="#c9a040" stroke-width=".9" stroke-opacity=".85"/>
+<text x="62" y="15" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="#c9a040" fill-opacity=".90" font-family="Cinzel Decorative, serif" letter-spacing="2">XVII</text>
+<!-- Illustration -->
+<rect x="3" y="25" width="118" height="152" fill="url(#s-bg)"/>
+<!-- Large 8-pointed star (center-top) -->
+<g transform="translate(62,52)" fill="#c9a040" fill-opacity=".88">
+  <polygon points="0,-20 4,-4 20,0 4,4 0,20 -4,4 -20,0 -4,-4"/>
+</g>
+<circle cx="62" cy="52" r="5" fill="#d4b040" fill-opacity=".90"/>
+<!-- Star glow -->
+<circle cx="62" cy="52" r="25" fill="rgba(180,130,0,.18)"/>
+<!-- Smaller stars (7 total) -->
+<g fill="#c9a040" fill-opacity=".70">
+  <polygon points="22,42 24,48 30,48 25,52 27,58 22,54 17,58 19,52 14,48 20,48" transform="scale(0.45) translate(25,40)"/>
+  <polygon points="0,0 1.5,4.5 6,4.5 2.5,7 4,11.5 0,8.5 -4,11.5 -2.5,7 -6,4.5 -1.5,4.5" transform="translate(22,42) scale(0.7)"/>
+  <polygon points="0,0 1.5,4.5 6,4.5 2.5,7 4,11.5 0,8.5 -4,11.5 -2.5,7 -6,4.5 -1.5,4.5" transform="translate(100,38) scale(0.7)"/>
+  <polygon points="0,0 1.5,4.5 6,4.5 2.5,7 4,11.5 0,8.5 -4,11.5 -2.5,7 -6,4.5 -1.5,4.5" transform="translate(16,72) scale(0.65)"/>
+  <polygon points="0,0 1.5,4.5 6,4.5 2.5,7 4,11.5 0,8.5 -4,11.5 -2.5,7 -6,4.5 -1.5,4.5" transform="translate(106,68) scale(0.65)"/>
+  <polygon points="0,0 1.5,4.5 6,4.5 2.5,7 4,11.5 0,8.5 -4,11.5 -2.5,7 -6,4.5 -1.5,4.5" transform="translate(35,30) scale(0.60)"/>
+  <polygon points="0,0 1.5,4.5 6,4.5 2.5,7 4,11.5 0,8.5 -4,11.5 -2.5,7 -6,4.5 -1.5,4.5" transform="translate(88,30) scale(0.60)"/>
+</g>
+<!-- Water pool -->
+<ellipse cx="62" cy="155" rx="50" ry="15" fill="#0a0800" fill-opacity=".8"/>
+<path d="M 12,150 Q 30,145 48,151 Q 62,155 76,151 Q 94,145 112,150" fill="none" stroke="#1a1200" stroke-width=".9"/>
+<path d="M 12,156 Q 30,151 48,157 Q 62,161 76,157 Q 94,151 112,156" fill="none" stroke="#140f00" stroke-width=".7"/>
+<!-- Star reflection in water -->
+<g fill="rgba(180,130,0,.30)"><ellipse cx="62" cy="158" rx="3" ry="1.5"/></g>
+<!-- Female figure kneeling at water's edge -->
+<ellipse cx="55" cy="128" rx="5.5" ry="6.5" fill="#1a0e00"/>
+<line x1="55" y1="134" x2="55" y2="152" stroke="#1a0e00" stroke-width="4.5" stroke-linecap="round"/>
+<line x1="55" y1="140" x2="45" y2="148" stroke="#1a0e00" stroke-width="2.5" stroke-linecap="round"/>
+<line x1="55" y1="140" x2="65" y2="148" stroke="#1a0e00" stroke-width="2.5" stroke-linecap="round"/>
+<!-- Water vessels (two lines of water pouring) -->
+<path d="M 45,148 C 40,155 38,162 36,168" stroke="rgba(100,80,20,.55)" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+<path d="M 65,148 C 70,155 72,162 74,168" stroke="rgba(100,80,20,.55)" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+<!-- Ground/land area -->
+<ellipse cx="55" cy="152" rx="20" ry="5" fill="#0e0800"/>
+<!-- Bottom strip -->
+<rect x="3" y="177" width="118" height="20" rx="0" fill="#020100" fill-opacity=".98"/>
+<line x1="3" y1="177" x2="121" y2="177" stroke="#c9a040" stroke-width=".9" stroke-opacity=".85"/>
+<text x="62" y="188" text-anchor="middle" dominant-baseline="middle" font-size="9.5" fill="#c9a040" fill-opacity=".88" font-family="Cormorant Garamond, serif" letter-spacing="2.5" font-weight="600">ЗВЕЗДА</text>
+<!-- Illustration border -->
+<rect x="3" y="25" width="118" height="152" fill="none" stroke="#c9a040" stroke-width=".5" stroke-opacity=".45"/>
+<!-- Creases -->
+<line x1="90" y1="25" x2="12" y2="177" stroke="rgba(255,200,80,.09)" stroke-width="9"/>
+<line x1="12" y1="110" x2="118" y2="177" stroke="rgba(255,200,80,.06)" stroke-width="7"/>
+<!-- Craquelure -->
+<g stroke="rgba(190,150,40,.18)" stroke-width=".5" fill="none" stroke-linecap="round">
+  <path d="M 32,85 L 44,100 L 38,115 M 32,85 L 18,80"/>
+  <path d="M 92,70 L 104,85 L 98,100 M 92,70 L 106,65"/>
+  <path d="M 55,130 L 68,144 L 62,158 M 68,144 L 80,138"/>
+</g>
+<g stroke="rgba(200,160,50,.22)" stroke-linecap="round" stroke-width=".45">
+  <line x1="18" y1="65" x2="32" y2="68"/><line x1="90" y1="145" x2="108" y2="148"/>
+  <line x1="40" y1="168" x2="55" y2="171"/><line x1="82" y1="32" x2="98" y2="30"/>
+</g>
+<rect x="3" y="25" width="118" height="152" fill="rgba(160,100,20,.025)" filter="url(#s-f)"/>
+<rect x="3" y="25" width="118" height="152" fill="url(#s-vig)"/>
+</svg>
+      <span class="card-pos">Будущее</span>
+    </div>
+
+  </div>
+  <div class="interp-box">
+    <div class="interp-label">✦ Интерпретация Luna</div>
+    <p class="interp-text">Карты говорят о переходном моменте. За иллюзиями прошлого — важный опыт. Сейчас, стоя перед выбором, ты уже гораздо мудрее. Звезда впереди обещает ясность и обновление.</p>
+  </div>
+</section>
+
+<section class="content how-section" id="how">
+  <div class="section-title">Как это работает</div>
+  <div class="steps-grid">
+    <div class="step-card"><div class="step-num">01</div><div class="step-icon">✍️</div><div class="step-title">Задай вопрос</div><p class="step-text">Напиши, что тебя волнует. Luna читает намерение и настраивает расклад под контекст.</p></div>
+    <div class="step-card"><div class="step-num">02</div><div class="step-icon">🃏</div><div class="step-title">Luna тянет карты</div><p class="step-text">ИИ выбирает три карты и создаёт живую интерпретацию — не шаблон, а ответ на твой вопрос.</p></div>
+    <div class="step-card"><div class="step-num">03</div><div class="step-icon">✨</div><div class="step-title">Читай расклад</div><p class="step-text">Прошлое, настоящее, будущее — с символами, энергией дня и советом Luna.</p></div>
+  </div>
+</section>
+
+<section class="content features-section" id="features">
+  <div class="features-grid">
+    <div class="feature-card"><div class="feature-icon">🔮</div><div class="feature-title">ИИ-интерпретация</div><p class="feature-text">Персональный анализ под каждый вопрос. Никаких шаблонов — живой отклик на твою ситуацию.</p></div>
+    <div class="feature-card"><div class="feature-icon">🌀</div><div class="feature-title">Эзотерика</div><p class="feature-text">Лунный цикл, число судьбы и энергия дня встроены в каждый расклад.</p></div>
+    <div class="feature-card"><div class="feature-icon">🌙</div><div class="feature-title">Память раскладов</div><p class="feature-text">Luna помнит историю и строит более глубокие связи с каждым вопросом.</p></div>
+    <div class="feature-card"><div class="feature-icon">🃏</div><div class="feature-title">78 карт Таро</div><p class="feature-text">Полная колода — Старшие и Младшие Арканы. Карта дня каждое утро.</p></div>
+  </div>
+</section>
+
+<section class="footer-cta">
+  <h2>Готова узнать,<br/>что тебя ждёт?</h2>
+  <a href="https://t.me/" class="cta-btn large">
+    <svg width="21" height="21" viewBox="0 0 22 22" fill="none"><path d="M11 2C6.03 2 2 6.03 2 11s4.03 9 9 9 9-4.03 9-9-4.03-9-9-9zm3.93 6.04-1.39 6.72c-.11.55-.44.68-.9.42l-2-.15-1 .96c-.11.11-.21.21-.45.21l.15-2.04 3.9-3.52c.18-.17-.05-.26-.3-.09L8.17 12.3l-1.97-.6c-.53-.17-.54-.53.1-.78l8.1-3.16c.44-.17.83.09.53.28z" fill="white"/></svg>
+    Начать бесплатно
+  </a>
+  <p class="footer-note">Luna Tarot · Telegram Bot · 2026</p>
+</section>
+<footer>
+  <span class="footer-logo">☽ Luna Tarot</span>
+  <span class="footer-copy">© 2026 · Все права защищены</span>
+</footer>
+
+<script>
+const canvas = document.getElementById('starfield');
+const ctx = canvas.getContext('2d');
+let W, H, stars = [], shooters = [], trail = [];
+function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; initStars(); }
+function initStars() {
+  stars = [];
+  const n = Math.floor(W * H / 5000);
+  for (let i = 0; i < n; i++) stars.push({ x: Math.random()*W, y: Math.random()*H, r: Math.random()<.08?1.8:Math.random()<.3?1.1:.55, base: .1+Math.random()*.55, t: Math.random()*Math.PI*2, sp: .4+Math.random()*1.2 });
+}
+function spawnShooter() {
+  const a = (15+Math.random()*30)*Math.PI/180;
+  shooters.push({ x: Math.random()*W*1.2-W*.1, y: Math.random()*H*.45, vx: Math.cos(a)*(10+Math.random()*14), vy: Math.sin(a)*(10+Math.random()*14), len: 80+Math.random()*130, life: 1 });
+}
+document.addEventListener('mousemove', e => {
+  if (Math.random()>.38) return;
+  trail.push({ x: e.clientX, y: e.clientY, r: .8+Math.random()*1.4, a: .6+Math.random()*.4, vx: (Math.random()-.5)*.8, vy: -.5-Math.random()*.8, life: 1 });
+});
+setInterval(spawnShooter, 2400+Math.random()*1600);
+setTimeout(spawnShooter, 600);
+let last = 0;
+function draw(ts) {
+  const dt = Math.min((ts-last)/16.7,3); last = ts;
+  ctx.clearRect(0,0,W,H);
+  stars.forEach(s => { s.t += .012*s.sp*dt; const a = s.base*(.5+.5*Math.sin(s.t)); ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2); ctx.fillStyle=`rgba(200,185,255,${a})`; ctx.fill(); });
+  for (let i=shooters.length-1;i>=0;i--) {
+    const s=shooters[i]; s.x+=s.vx*dt; s.y+=s.vy*dt; s.life-=.022*dt;
+    if(s.life<=0){shooters.splice(i,1);continue;}
+    const mag=Math.hypot(s.vx,s.vy), tx=s.x-s.vx/mag*s.len, ty=s.y-s.vy/mag*s.len;
+    const g=ctx.createLinearGradient(tx,ty,s.x,s.y);
+    g.addColorStop(0,'rgba(190,175,255,0)'); g.addColorStop(.7,`rgba(215,205,255,${s.life*.5})`); g.addColorStop(1,`rgba(255,255,255,${s.life})`);
+    ctx.beginPath(); ctx.moveTo(tx,ty); ctx.lineTo(s.x,s.y); ctx.strokeStyle=g; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.beginPath(); ctx.arc(s.x,s.y,2.5,0,Math.PI*2); ctx.fillStyle=`rgba(255,255,255,${s.life})`; ctx.fill();
+  }
+  for (let i=trail.length-1;i>=0;i--) {
+    const p=trail[i]; p.x+=p.vx; p.y+=p.vy; p.life-=.045*dt; p.a*=.93;
+    if(p.life<=0){trail.splice(i,1);continue;}
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.r*p.life,0,Math.PI*2); ctx.fillStyle=`rgba(167,139,250,${p.a*p.life})`; ctx.fill();
+  }
+  requestAnimationFrame(draw);
+}
+window.addEventListener('resize', resize);
+resize(); requestAnimationFrame(draw);
+</script>
+</body>
+</html>

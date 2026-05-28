@@ -1,0 +1,93 @@
+/* Стили временной splash/hello — будут заменены настоящим Hub в Phase 5.4. */
+
+.splash, .hello {
+  width: min(100vw, 390px);
+  margin: 0 auto;
+  min-height: 100vh;
+  padding: env(safe-area-inset-top, 24px) 22px env(safe-area-inset-bottom, 24px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 14px;
+}
+
+.splash-wordmark,
+.hello-wordmark {
+  font-family: var(--font-mark);
+  font-size: 56px;
+  line-height: 1;
+  color: var(--gold-warm);
+  letter-spacing: .04em;
+  text-shadow: 0 2px 18px rgba(201,161,74,.35);
+}
+
+.splash-sub {
+  font-family: var(--font-display);
+  font-size: 9px;
+  letter-spacing: .42em;
+  color: var(--ink-dim);
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+.splash-text {
+  font-family: var(--font-italic);
+  font-style: italic;
+  font-size: 14px;
+  color: var(--ink-dim);
+  max-width: 280px;
+  line-height: 1.5;
+}
+
+.splash-faint {
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+
+.hello-sub {
+  font-style: italic;
+  font-size: 16px;
+  color: var(--ink);
+  margin-top: 6px;
+}
+.hello-sub em {
+  color: var(--gold-warm);
+  font-style: italic;
+}
+
+.hello-profile {
+  margin-top: 18px;
+  width: 100%;
+  max-width: 320px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 16px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  font-size: 13px;
+}
+.hello-profile dt {
+  font-family: var(--font-display);
+  font-size: 9px;
+  letter-spacing: .25em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  align-self: center;
+}
+.hello-profile dd {
+  text-align: right;
+  color: var(--ink);
+  font-style: italic;
+}
+
+.hello-foot {
+  margin-top: 14px;
+  font-style: italic;
+  font-size: 12px;
+  color: var(--ink-faint);
+  max-width: 280px;
+  line-height: 1.4;
+}

@@ -1,0 +1,308 @@
+.shell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 2;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 18px;
+}
+.back {
+  font-family: var(--font-display);
+  font-size: 10px;
+  letter-spacing: .25em;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  background: none; border: none; cursor: pointer;
+  transition: color .25s ease;
+}
+.back:hover { color: var(--gold); }
+.title {
+  font-family: var(--font-display);
+  font-size: 9px;
+  letter-spacing: .35em;
+  color: var(--gold);
+  text-transform: uppercase;
+}
+
+.stage {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding-top: 6px;
+  gap: 14px;
+}
+
+.empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  text-align: center;
+  padding: 32px 0;
+}
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 14px;
+}
+
+/* Запись в дневнике */
+.entry {
+  background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.18)), var(--bg-soft);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color .3s ease, transform .25s ease;
+}
+.entry:hover { border-color: var(--line-hot); }
+.entry.expanded {
+  border-color: var(--gold);
+  background: linear-gradient(180deg, rgba(201,161,74,.05), rgba(201,161,74,0)), var(--bg-soft);
+}
+
+.entryHead {
+  display: grid;
+  grid-template-columns: 64px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+}
+
+/* Стопка миниатюр карт (3 штуки наслоены друг на друга) */
+.thumbStack {
+  position: relative;
+  width: 60px;
+  height: 72px;
+  flex-shrink: 0;
+}
+.thumb {
+  position: absolute;
+  width: 38px;
+  height: 60px;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(201,161,74,.3);
+  box-shadow: 0 4px 10px -4px rgba(0,0,0,.8);
+}
+.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.thumb:nth-child(1) { left: 0;  top: 6px; transform: rotate(-8deg); z-index: 1; }
+.thumb:nth-child(2) { left: 11px; top: 0;  z-index: 2; }
+.thumb:nth-child(3) { left: 22px; top: 6px; transform: rotate(8deg); z-index: 1; }
+
+/* Бейдж «+N» для раскладов с большим числом карт */
+.thumbMore {
+  position: absolute;
+  right: -8px;
+  bottom: -4px;
+  z-index: 4;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 5px;
+  border-radius: 11px;
+  background: var(--bg-soft, #0d0a18);
+  border: 1px solid var(--gold, #d4af37);
+  color: var(--gold, #d4af37);
+  font-family: var(--font-display);
+  font-size: 9px;
+  letter-spacing: .08em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.entryMeta { min-width: 0; }
+.entryDate {
+  font-family: var(--font-display);
+  font-size: 9px;
+  letter-spacing: .28em;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.entryKind {
+  color: var(--ink-faint, rgba(255,255,255,.55));
+  letter-spacing: .14em;
+}
+.entryQuestion {
+  font-style: italic;
+  font-size: 14px;
+  color: var(--ink);
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.entryQuestion.untyped { color: var(--ink-dim); }
+.entryArrow {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--gold);
+  font-size: 12px;
+  transition: transform .35s ease, border-color .25s ease;
+}
+.entry.expanded .entryArrow {
+  transform: rotate(90deg);
+  border-color: var(--line-hot);
+}
+
+/* Outcome badge (точка/символ в правом углу entry) */
+.outcomeBadge {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px dashed var(--line, rgba(212, 175, 55, 0.25));
+  background: rgba(255, 255, 255, 0.02);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: var(--ink-faint, rgba(255, 255, 255, 0.4));
+  cursor: pointer;
+  transition: border-color 0.25s ease, transform 0.15s ease, background 0.25s ease;
+  flex-shrink: 0;
+}
+.outcomeBadge:hover {
+  border-color: var(--gold, #d4af37);
+  color: var(--gold, #d4af37);
+}
+.outcomeBadge:active { transform: scale(0.92); }
+.outcomeBadgeFilled {
+  border-style: solid;
+  border-color: var(--gold, #d4af37);
+  background: linear-gradient(180deg, rgba(212, 175, 55, 0.12), rgba(212, 175, 55, 0));
+  color: var(--gold, #d4af37);
+  font-size: 16px;
+}
+
+/* Раскрытая часть */
+.entryBody {
+  overflow: hidden;
+  padding: 0 14px;
+  border-top: 1px solid var(--line);
+}
+
+.layoutWrap {
+  padding: 14px 0 8px;
+}
+
+.cardsRow {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 0 8px;
+}
+.cardCol { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.cardArt {
+  width: 60px; height: 96px;
+  border-radius: 6px; overflow: hidden;
+  border: 1px solid rgba(201,161,74,.25);
+}
+.cardArt img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cardCaption {
+  font-family: var(--font-display);
+  font-size: 8px; letter-spacing: .25em;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.interpretation {
+  font-style: italic;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink-dim);
+  padding: 8px 0 14px;
+  white-space: pre-wrap;
+}
+
+/* Блок «Как сбылось» в развёрнутой entry */
+.outcomeBlock {
+  padding: 14px 0 16px;
+  border-top: 1px solid var(--line, rgba(212, 175, 55, 0.18));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.outcomeHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.outcomeGlyph {
+  font-size: 18px;
+  line-height: 1;
+}
+.outcomeLabel {
+  font-family: var(--font-display, 'Cinzel', serif);
+  font-size: 10px;
+  letter-spacing: 0.28em;
+  color: var(--gold, #d4af37);
+  text-transform: uppercase;
+}
+.outcomeDate {
+  font-family: var(--font-display, 'Cinzel', serif);
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  color: var(--ink-faint, rgba(255, 255, 255, 0.45));
+  text-transform: uppercase;
+}
+.outcomeNote {
+  margin: 0;
+  font-style: italic;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink, #ede0c4);
+  padding-left: 14px;
+  border-left: 2px solid var(--line-hot, rgba(212, 175, 55, 0.4));
+}
+.outcomeEdit {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  padding: 4px 0;
+  font-family: var(--font-display, 'Cinzel', serif);
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-faint, rgba(255, 255, 255, 0.5));
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+.outcomeEdit:hover { color: var(--gold, #d4af37); }
+
+.outcomeCta {
+  margin: 4px 0 14px;
+  background: none;
+  border: 1px dashed var(--line, rgba(212, 175, 55, 0.25));
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-family: var(--font-display, 'Cinzel', serif);
+  font-size: 10px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--ink-faint, rgba(255, 255, 255, 0.55));
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.25s ease, color 0.25s ease;
+  width: 100%;
+}
+.outcomeCta:hover {
+  border-color: var(--gold, #d4af37);
+  color: var(--gold, #d4af37);
+}
+
+/* Лоадер вынесен в общий <OrbitalLoader>. */

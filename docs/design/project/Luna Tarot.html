@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Luna Tarot — Design Exploration</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet"/>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel" src="design-canvas.jsx"></script>
+  <script type="text/babel" src="tweaks-panel.jsx"></script>
+  <script type="text/babel" src="bot-flow.jsx"></script>
+  <script type="text/babel" src="landing.jsx"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body, #root { width: 100%; height: 100%; overflow: hidden; }
+    body { background: #0a0614; font-family: 'DM Sans', sans-serif; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { DesignCanvas, DCSection, DCArtboard } = window;
+const { TweaksPanel, TweakSection, TweakRadio, TweakToggle, useTweaks } = window;
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "botTheme": "freemium",
+  "landingVariant": "editorial",
+  "showOnboarding": true
+}/*EDITMODE-END*/;
+
+/* ── Screen Guide annotation artboard ───────────────────────── */
+const SCREENS = [
+  { step: '01', title: 'Приветствие', desc: 'Luna встречает пользователя. Минимальный порог входа — нажми одну кнопку «Начать ✨».' },
+  { step: '02', title: 'Имя', desc: 'Бот запрашивает имя — оно будет использоваться в каждом раскладе для персонализации.' },
+  { step: '03', title: 'Дата рождения', desc: 'Дата раскрывает эзотерический профиль: знак, число судьбы, лунный цикл.' },
+  { step: '04', title: 'Главное меню', desc: '3 действия: расклад на вопрос, карта дня, история. Telegram inline-keyboard.' },
+  { step: '05', title: 'Ввод вопроса', desc: 'Свободный текст. Luna читает намерение и адаптирует выбор карт под контекст.' },
+  { step: '06', title: 'Анимация ожидания', desc: 'Печатающие точки + «Luna тянет карты...» создают ритуальный момент.' },
+  { step: '07', title: 'Открытие карт', desc: '3 карты рубашками вниз. Пользователь нажимает — эффект 3D-переворота.' },
+  { step: '08', title: 'Полный расклад', desc: 'Прошлое / настоящее / будущее с интерпретацией, символами и советом Luna.' },
+];
+
+function BotScreenGuide() {
+  const GLD = '#c9a14a', PUR = '#8b5cf6', TXT = '#ede7ff', DIM = 'rgba(237,231,255,.5)';
+  return (
+    <div style={{ width: 560, minHeight: 812, background: '#0a0614', padding: '36px 32px', fontFamily: "'DM Sans',sans-serif", color: TXT }}>
+      <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 26, fontWeight: 600, color: GLD, marginBottom: 6 }}>
+        ✦ Ключевые экраны бота
+      </div>
+      <div style={{ fontSize: 13, color: DIM, marginBottom: 28 }}>
+        Нажми на артборд «Расклад» и кликай кнопки внутри телефона — прототип интерактивен
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        {SCREENS.map((sc, i) => (
+          <div key={sc.step} style={{ display: 'flex', gap: 18, padding: '16px 0', borderBottom: i < SCREENS.length - 1 ? '1px solid rgba(139,92,246,.1)' : 'none', alignItems: 'flex-start' }}>
+            <div style={{ width: 34, height: 34, borderRadius: '50%', flexShrink: 0, background: 'rgba(139,92,246,.14)', border: '1px solid rgba(139,92,246,.28)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Cormorant Garamond',serif", fontSize: 13, color: PUR, fontWeight: 600 }}>{sc.step}</div>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: TXT, marginBottom: 3 }}>{sc.title}</div>
+              <div style={{ fontSize: 12.5, color: DIM, lineHeight: 1.6 }}>{sc.desc}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div style={{ marginTop: 28, background: 'rgba(201,161,74,.08)', border: '1px solid rgba(201,161,74,.22)', borderRadius: 14, padding: '18px 20px' }}>
+        <div style={{ fontSize: 11, color: GLD, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>✦ Монетизация</div>
+        <div style={{ fontSize: 12.5, color: DIM, lineHeight: 1.65 }}>
+          <strong style={{ color: TXT }}>Freemium:</strong> 1 расклад в день бесплатно.
+          За подписку — безлимит, карта дня, история и приоритетный ИИ.
+          Разовые токены для глубоких раскладов (5–10 карт).
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── App ─────────────────────────────────────────────────────── */
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+
+  return (
+    <>
+      <DesignCanvas title="Luna Tarot — Design Exploration">
+
+        {/* ── BOT FLOWS ─────────────────────────────────────────── */}
+        <DCSection id="bot" title="🤖 Флоу бота (Telegram)">
+
+          <DCArtboard id="bot-reading" label="Расклад на вопрос" width={375} height={812}>
+            <div style={{ width: 375, height: 812, background: 'radial-gradient(ellipse at 50% 40%, #1a0b35 0%, #07031a 100%)' }}>
+              <BotFlow key="reading"/>
+            </div>
+          </DCArtboard>
+
+          <DCArtboard id="bot-cod" label="Карта дня" width={375} height={812}>
+            <div style={{ width: 375, height: 812, background: 'radial-gradient(ellipse at 50% 40%, #1a0b35 0%, #07031a 100%)' }}>
+              <CardOfDay/>
+            </div>
+          </DCArtboard>
+
+          <DCArtboard id="bot-history" label="История раскладов" width={375} height={812}>
+            <div style={{ width: 375, height: 812, background: 'radial-gradient(ellipse at 50% 40%, #1a0b35 0%, #07031a 100%)' }}>
+              <ReadingHistory/>
+            </div>
+          </DCArtboard>
+
+          <DCArtboard id="bot-guide" label="Ключевые экраны" width={560} height={812}>
+            <BotScreenGuide/>
+          </DCArtboard>
+
+        </DCSection>
+
+        {/* ── LANDING ───────────────────────────────────────────── */}
+        <DCSection id="landing" title="🌙 Лендинг">
+
+          <DCArtboard id="landing-dark" label="Тёмный & Мистический" width={1440} height={2380}>
+            <LandingMystical/>
+          </DCArtboard>
+
+          <DCArtboard id="landing-light" label="Эдиториал & Светлый" width={1440} height={2120}>
+            <LandingEditorial/>
+          </DCArtboard>
+
+          <DCArtboard id="landing-standalone-note" label="→ Отдельный лендинг" width={360} height={280}>
+            <StandaloneLandingNote/>
+          </DCArtboard>
+
+        </DCSection>
+
+      </DesignCanvas>
+
+      <TweaksPanel>
+        <TweakSection label="Монетизация"/>
+        <TweakRadio
+          label="Модель"
+          value={t.botTheme}
+          options={['freemium', 'tokens']}
+          onChange={v => setTweak('botTheme', v)}
+        />
+        <TweakSection label="Лендинг"/>
+        <TweakRadio
+          label="Стиль"
+          value={t.landingVariant}
+          options={['mystical', 'editorial']}
+          onChange={v => setTweak('landingVariant', v)}
+        />
+        <TweakToggle
+          label="Онбординг в боте"
+          value={t.showOnboarding}
+          onChange={v => setTweak('showOnboarding', v)}
+        />
+      </TweaksPanel>
+    </>
+  );
+}
+
+/* ── Standalone landing note artboard ───────────────────────── */
+function StandaloneLandingNote() {
+  const GLD = '#c9a14a', PUR = '#8b5cf6', TXT = '#ede7ff', DIM = 'rgba(237,231,255,.5)';
+  return (
+    <div style={{ width: 360, height: 280, background: '#0a0614', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: '32px', fontFamily: "'DM Sans',sans-serif", textAlign: 'center' }}>
+      <div style={{ fontSize: 32 }}>🌙</div>
+      <div style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: 20, fontWeight: 600, color: TXT }}>Отдельный лендинг</div>
+      <div style={{ fontSize: 13, color: DIM, lineHeight: 1.6 }}>Открой файл <strong style={{ color: GLD }}>Landing.html</strong> для просмотра самостоятельного лендинга — он работает без этого файла и готов к деплою.</div>
+      <div style={{ marginTop: 4, fontSize: 12, color: 'rgba(139,92,246,.7)', background: 'rgba(139,92,246,.1)', border: '1px solid rgba(139,92,246,.25)', borderRadius: 20, padding: '6px 14px' }}>Landing.html</div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

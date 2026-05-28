@@ -1,0 +1,19 @@
+.device {
+  width: min(100vw, 390px);
+  /* 100dvh лучше для mobile (учитывает динамический address-bar);
+     fallback на 100vh для старых браузеров и Telegram Desktop. */
+  min-height: 100vh;
+  min-height: 100dvh;
+  height: 100vh;
+  height: 100dvh;
+  margin: 0 auto;
+  padding: env(safe-area-inset-top, 8px) 20px env(safe-area-inset-bottom, 10px);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  isolation: isolate;
+  /* Скролл — только внутри device. body не скроллится, чтобы DayCard
+     position:fixed гарантированно оставалась на месте. */
+  overflow-y: auto;
+  overflow-x: hidden;
+}

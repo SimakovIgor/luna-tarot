@@ -1,0 +1,16 @@
+.whisper {
+  font-family: var(--font-italic);
+  font-style: italic;
+  color: var(--ink-dim);
+  line-height: 1.45;
+  text-align: center;
+  margin: 0 auto;
+}
+.sizeM { font-size: 13.5px; max-width: 290px; }
+.sizeS { font-size: 12px;   max-width: 260px; }
+.sizeL { font-size: 16px;   max-width: 310px; }
+
+.ink    { color: var(--ink); }
+.faint  { color: var(--ink-faint); }
+
+.emGold em { color: var(--gold-warm); font-style: italic; font-weight: 500; }

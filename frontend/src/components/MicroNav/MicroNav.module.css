@@ -1,0 +1,28 @@
+.nav {
+  position: relative;
+  z-index: 2;
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-display);
+  font-size: 9px;
+  letter-spacing: .25em;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  transition: color .25s ease;
+}
+.item:hover { color: var(--gold); }
+.dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--ink-faint);
+  transition: background .25s ease;
+}
+.item:hover .dot { background: var(--gold); }

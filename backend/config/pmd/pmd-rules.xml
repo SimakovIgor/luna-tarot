@@ -1,0 +1,133 @@
+<?xml version="1.0"?>
+<ruleset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         name="Custom ruleset"
+         xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 http://pmd.sourceforge.net/ruleset_2_0_0.xsd">
+    <description>PMD configuration for luna-tarot</description>
+
+    <rule ref="category/java/bestpractices.xml">
+        <exclude name="JUnitTestsShouldIncludeAssert"/>
+        <exclude name="GuardLogStatement"/>
+        <exclude name="CheckResultSet"/>
+        <exclude name="AbstractClassWithoutAbstractMethod"/>
+        <exclude name="JUnitTestContainsTooManyAsserts"/>
+        <exclude name="PreserveStackTrace"/>
+    </rule>
+
+    <rule ref="category/java/bestpractices.xml/LooseCoupling">
+        <properties>
+            <!--
+              HttpHeaders — конкретный класс Spring, без интерфейса.
+              InlineKeyboardRow — конкретный класс telegrambots-meta (extends ArrayList<InlineKeyboardButton>),
+              сам API его требует, замена на List невозможна.
+            -->
+            <property name="allowedTypes" value="org.springframework.http.HttpHeaders,org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow"/>
+        </properties>
+    </rule>
+
+    <rule ref="category/java/codestyle.xml">
+        <exclude name="ShortVariable"/>
+        <exclude name="OnlyOneReturn"/>
+        <exclude name="AtLeastOneConstructor"/>
+        <exclude name="CommentDefaultAccessModifier"/>
+        <exclude name="LongVariable"/>
+        <exclude name="CallSuperInConstructor"/>
+        <exclude name="LocalVariableCouldBeFinal"/>
+        <exclude name="MethodArgumentCouldBeFinal"/>
+        <exclude name="UseExplicitTypes"/>
+        <exclude name="FieldNamingConventions"/>
+        <exclude name="MethodNamingConventions"/>
+    </rule>
+
+
+    <rule ref="category/java/codestyle.xml/ClassNamingConventions">
+        <properties>
+            <property name="utilityClassPattern" value="[A-Z][a-zA-Z0-9]*"/>
+        </properties>
+    </rule>
+
+    <rule ref="category/java/codestyle.xml/ShortMethodName">
+        <properties>
+            <property name="minimum" value="2"/>
+        </properties>
+    </rule>
+
+    <rule ref="category/java/codestyle.xml/TooManyStaticImports">
+        <properties>
+            <property name="maximumStaticImports" value="20"/>
+        </properties>
+    </rule>
+
+    <rule ref="category/java/codestyle.xml/LinguisticNaming">
+        <properties>
+            <property name="checkSetters" value="false"/>
+            <property name="violationSuppressXPath"
+                      value=".[pmd-java:hasAnnotation('org.junit.jupiter.api.Test')] | .[pmd-java:hasAnnotation('org.junit.jupiter.params.ParameterizedTest')]"/>
+        </properties>
+    </rule>
+
+    <rule ref="category/java/codestyle.xml/FieldNamingConventions">
+        <properties>
+            <property name="violationSuppressRegex" value="serialVersionUID"/>
+        </properties>
+    </rule>
+
+    <rule ref="category/java/design.xml">
+        <exclude name="LawOfDemeter"/>
+        <exclude name="LoosePackageCoupling"/>
+        <exclude name="AvoidCatchingGenericException"/>
+        <exclude name="UseUtilityClass"/>
+        <exclude name="ExcessiveImports"/>
+        <exclude name="CouplingBetweenObjects"/>
+        <exclude name="TooManyMethods"/>
+        <exclude name="ClassWithOnlyPrivateConstructorsShouldBeFinal"/>
+        <exclude name="SingularField"/>
+        <exclude name="AvoidThrowingRawExceptionTypes"/>
+        <exclude name="DataClass"/>
+        <!-- Spring MVC controllers aggregate multiple request handlers by design -->
+        <exclude name="GodClass"/>
+    </rule>
+
+    <rule ref="category/java/design.xml/SignatureDeclareThrowsException">
+        <properties>
+            <!-- Spring Security's HttpSecurity.build() forces throws Exception on filter chain methods -->
+            <property name="violationSuppressXPath"
+                      value=".[ancestor::ClassDeclaration[pmd-java:hasAnnotation('org.springframework.context.annotation.Configuration')]]"/>
+        </properties>
+    </rule>
+
+    <rule ref="category/java/design.xml/TooManyFields">
+        <properties>
+            <property name="maxfields" value="30"/>
+        </properties>
+    </rule>
+
+    <rule ref="category/java/documentation.xml">
+        <exclude name="CommentRequired"/>
+        <exclude name="CommentSize"/>
+    </rule>
+
+    <rule ref="category/java/multithreading.xml">
+        <exclude name="UseConcurrentHashMap"/>
+        <exclude name="DoNotUseThreads"/>
+    </rule>
+
+    <rule ref="category/java/performance.xml">
+        <!-- Legacy J2ME rule, irrelevant on modern JVM — object allocation inside loops
+             is handled efficiently by JIT and GC; suppressing per-site pollutes code -->
+        <exclude name="AvoidInstantiatingObjectsInLoops"/>
+    </rule>
+
+    <rule ref="category/java/security.xml"/>
+
+    <rule ref="category/java/errorprone.xml">
+        <exclude name="AvoidCatchingThrowable"/>
+        <exclude name="MissingSerialVersionUID"/>
+        <exclude name="AvoidLiteralsInIfCondition"/>
+        <exclude name="AvoidDuplicateLiterals"/>
+        <exclude name="TestClassWithoutTestCases"/>
+        <exclude name="ConstructorCallsOverridableMethod"/>
+        <exclude name="AvoidFieldNameMatchingMethodName"/>
+        <exclude name="NonSerializableClass"/>
+    </rule>
+</ruleset>

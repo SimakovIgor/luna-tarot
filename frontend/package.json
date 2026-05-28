@@ -1,0 +1,35 @@
+{
+  "name": "luna-tarot-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "sync:cards": "rm -rf public/cards && mkdir -p public/cards && cp ../backend/src/main/resources/cards/*.jpg ../backend/src/main/resources/cards/*.webp public/cards/ 2>/dev/null; true",
+    "dev": "npm run sync:cards && vite",
+    "build": "npm run sync:cards && tsc -b && vite build",
+    "build:to-backend": "npm run sync:cards && tsc -b && vite build --outDir ../backend/src/main/resources/static/app --emptyOutDir",
+    "preview": "vite preview",
+    "typecheck": "tsc -b --noEmit",
+    "lint": "eslint . --max-warnings 0"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.62.0",
+    "framer-motion": "^11.15.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.28.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.8.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@typescript-eslint/eslint-plugin": "^8.18.0",
+    "@typescript-eslint/parser": "^8.18.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^8.57.1",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "eslint-plugin-react-refresh": "^0.4.16",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.3"
+  }
+}

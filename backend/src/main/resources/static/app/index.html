@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+    <meta name="theme-color" content="#08050f" />
+    <title>Luna — Зеркало Таро</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Manrope:wght@400;500;600;700&family=UnifrakturMaguntia&display=swap" rel="stylesheet">
+
+    <!-- Рубашка карты появляется первой на splash. Preload, чтобы браузер начал её качать
+         параллельно с JS-бандлом, а не после mount-а CardBack. -->
+    <link rel="preload" as="image" href="/app/cards/back.jpg?v=4">
+
+    <!-- Telegram WebApp SDK — подключаем глобально; обёртку используем через src/telegram/webapp.ts -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script type="module" crossorigin src="/app/assets/index-BP6fPgA9.js"></script>
+    <link rel="stylesheet" crossorigin href="/app/assets/index-CKTJjT9t.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

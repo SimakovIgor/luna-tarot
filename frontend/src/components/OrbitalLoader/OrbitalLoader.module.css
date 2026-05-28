@@ -1,0 +1,53 @@
+.orbital {
+  position: relative;
+  width: 160px;
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.orbitCenter {
+  font-family: var(--font-display);
+  font-size: 28px;
+  color: var(--gold);
+  text-shadow: 0 0 16px rgba(212, 175, 55, 0.6);
+}
+
+.orbitDotA,
+.orbitDotB {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+}
+
+.orbitDotA::after,
+.orbitDotB::after {
+  content: '';
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  margin-left: -5px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff4d1, var(--gold-warm) 60%, transparent);
+  box-shadow: 0 0 14px rgba(212, 175, 55, 0.7);
+}
+
+.orbitDotA {
+  border: 1px dashed rgba(212, 175, 55, 0.35);
+}
+
+.orbitDotB {
+  border: 1px dashed rgba(212, 175, 55, 0.2);
+  width: 110px;
+  height: 110px;
+  margin: 25px;
+}
+
+.orbitDotB::after {
+  width: 7px;
+  height: 7px;
+  margin-left: -3.5px;
+}

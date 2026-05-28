@@ -1,0 +1,191 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 3, 12, 0.7);
+  backdrop-filter: blur(6px);
+  z-index: 100;
+}
+
+.sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 101;
+  background:
+    linear-gradient(180deg, rgba(28, 13, 51, 0.95), rgba(10, 6, 19, 0.98));
+  border-top: 1px solid var(--line, rgba(212, 175, 55, 0.25));
+  border-top-left-radius: 22px;
+  border-top-right-radius: 22px;
+  box-shadow: 0 -16px 48px rgba(0, 0, 0, 0.6);
+  max-height: 92vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.handle {
+  margin: 8px auto 0;
+  width: 44px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(212, 175, 55, 0.35);
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.handle:hover { background: rgba(212, 175, 55, 0.6); }
+
+.body {
+  padding: 14px 20px 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.context {
+  text-align: center;
+  font-size: 13px;
+  color: var(--ink-dim, rgba(255, 255, 255, 0.65));
+  font-style: italic;
+  margin: 4px 0 0;
+  line-height: 1.4;
+}
+.contextEm {
+  color: var(--gold, #d4af37);
+  font-style: normal;
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.option {
+  display: grid;
+  grid-template-columns: 38px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--line, rgba(212, 175, 55, 0.18));
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.25s ease, background 0.25s ease, transform 0.15s ease;
+  color: var(--ink, rgba(255, 255, 255, 0.92));
+}
+.option:hover:not(:disabled) {
+  border-color: var(--line-hot, rgba(212, 175, 55, 0.45));
+}
+.option:active:not(:disabled) {
+  transform: scale(0.98);
+}
+.optionActive {
+  border-color: var(--gold, #d4af37);
+  background: linear-gradient(180deg, rgba(212, 175, 55, 0.1), rgba(212, 175, 55, 0));
+  box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.45) inset;
+}
+
+.optionGlyph {
+  font-size: 22px;
+  line-height: 1;
+  text-align: center;
+}
+.optionLabel {
+  font-family: var(--font-display, 'Cinzel', serif);
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  color: var(--ink, #ede0c4);
+  text-transform: uppercase;
+}
+.optionHint {
+  font-size: 11px;
+  font-style: italic;
+  color: var(--ink-faint, rgba(255, 255, 255, 0.55));
+  grid-column: 2;
+  grid-row: 2;
+}
+
+.noteWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  position: relative;
+}
+.noteLabel {
+  font-family: var(--font-display, 'Cinzel', serif);
+  font-size: 9px;
+  letter-spacing: 0.28em;
+  color: var(--gold, #d4af37);
+  text-transform: uppercase;
+}
+.noteOpt {
+  color: var(--ink-faint, rgba(255, 255, 255, 0.45));
+  letter-spacing: 0.12em;
+  font-size: 8.5px;
+}
+.noteInput {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--line, rgba(212, 175, 55, 0.2));
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: var(--ink, #ede0c4);
+  font-family: var(--font-italic);
+  font-size: 15px;
+  font-style: italic;
+  line-height: 1.4;
+  resize: vertical;
+  min-height: 70px;
+  transition: border-color 0.25s ease;
+  box-sizing: border-box;
+}
+.noteInput:focus {
+  outline: none;
+  border-color: var(--gold, #d4af37);
+}
+.noteCount {
+  align-self: flex-end;
+  font-size: 10px;
+  color: var(--ink-faint, rgba(255, 255, 255, 0.45));
+}
+
+.error {
+  margin: 0;
+  text-align: center;
+  font-size: 12px;
+  color: #e87e7e;
+  font-style: italic;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+  margin-top: 4px;
+}
+.actionsMain {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.clearBtn {
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  color: var(--ink-faint, rgba(255, 255, 255, 0.5));
+  font-family: var(--font-display, 'Cinzel', serif);
+  font-size: 10px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+.clearBtn:hover { color: var(--gold, #d4af37); }

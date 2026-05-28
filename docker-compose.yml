@@ -1,0 +1,55 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: luna-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-luna}
+      POSTGRES_USER: ${POSTGRES_USER:-luna}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-luna}
+    volumes:
+      - luna_pgdata:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-luna} -d ${POSTGRES_DB:-luna}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: luna-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-luna}
+      DB_USER: ${POSTGRES_USER:-luna}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-luna}
+      SERVER_PORT: 8080
+      TG_BOT_TOKEN: ${TG_BOT_TOKEN:-}
+      TG_BOT_USERNAME: ${TG_BOT_USERNAME:-}
+      TG_MINI_APP_URL: ${TG_MINI_APP_URL:-}
+      LLM_PROVIDER: ${LLM_PROVIDER:-stub}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-claude-haiku-4-5-20251001}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+
+  landing:
+    build:
+      context: ./landing
+      dockerfile: Dockerfile
+    container_name: luna-landing
+    restart: unless-stopped
+    ports:
+      - "${LANDING_PORT:-8081}:80"
+
+volumes:
+  luna_pgdata:

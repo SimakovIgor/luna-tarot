@@ -1,0 +1,68 @@
+spring:
+  application:
+    name: luna-tarot-backend
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/luna}
+    username: ${DB_USER:luna}
+    password: ${DB_PASSWORD:luna}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc.time_zone: UTC
+        format_sql: false
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+server:
+  port: ${SERVER_PORT:8080}
+  forward-headers-strategy: framework
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
+
+logging:
+  level:
+    root: INFO
+    com.lunatarot: DEBUG
+    org.hibernate.SQL: WARN
+
+# --- App-specific config (populated as features land) ---
+luna:
+  telegram:
+    enabled: ${TG_BOT_ENABLED:true}
+    bot-token: ${TG_BOT_TOKEN:}
+    bot-username: ${TG_BOT_USERNAME:}
+    mini-app-url: ${TG_MINI_APP_URL:}
+  llm:
+    provider: ${LLM_PROVIDER:stub}        # stub | claude
+    anthropic-api-key: ${ANTHROPIC_API_KEY:}
+    anthropic-base-url: ${ANTHROPIC_BASE_URL:https://api.anthropic.com}
+    model: ${LLM_MODEL:claude-haiku-4-5-20251001}
+    max-tokens: ${LLM_MAX_TOKENS:1024}
+    timeout: ${LLM_TIMEOUT:30s}
+  admin:
+    username: ${ADMIN_USERNAME:}
+    password: ${ADMIN_PASSWORD:}
+  freemium:
+    daily-readings-free: 1
+  daily-card:
+    enabled: ${DAILY_CARD_ENABLED:true}
+    # 08:00 Москва (UTC+3) = 05:00 UTC
+    cron: ${DAILY_CARD_CRON:0 0 5 * * *}

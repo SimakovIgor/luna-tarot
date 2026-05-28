@@ -1,0 +1,8 @@
+.root {
+  display: inline;
+}
+
+.bold {
+  font-weight: 600;
+  color: var(--ink);
+}

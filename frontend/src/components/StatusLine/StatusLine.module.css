@@ -1,0 +1,21 @@
+.top {
+  position: relative;
+  /* Выше DayCard на хабе (DayCard z-index 50) — чтобы status-line не закрывалась картой. */
+  z-index: 100;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-display);
+  font-size: 9px;
+  letter-spacing: .22em;
+  color: var(--ink-dim);
+  text-transform: uppercase;
+  padding-top: 4px;
+}
+.moonPhase { display: flex; align-items: center; gap: 8px; }
+.right { display: flex; align-items: center; }
+.dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #f6e5b5 0%, var(--gold) 60%, transparent 100%);
+  box-shadow: 0 0 8px rgba(201,161,74,.6);
+}

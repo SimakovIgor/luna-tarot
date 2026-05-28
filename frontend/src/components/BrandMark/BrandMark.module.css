@@ -1,0 +1,27 @@
+.brand {
+  text-align: center;
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.wordmark {
+  font-family: var(--font-mark);
+  line-height: 1;
+  color: var(--gold-warm);
+  letter-spacing: .04em;
+  text-shadow: 0 2px 14px rgba(201,161,74,.3);
+}
+.wordmark.sizeXL { font-size: 56px; }
+.wordmark.sizeL  { font-size: 46px; }
+.wordmark.sizeM  { font-size: 36px; }
+.wordmark.sizeS  { font-size: 28px; }
+.subline {
+  font-family: var(--font-display);
+  font-size: 8px;
+  letter-spacing: .42em;
+  color: var(--ink-dim);
+  text-transform: uppercase;
+}

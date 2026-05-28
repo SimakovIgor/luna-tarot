@@ -1,0 +1,206 @@
+.shell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 2;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 18px;
+}
+.back {
+  font-family: var(--font-display);
+  font-size: 10px;
+  letter-spacing: .25em;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  background: none; border: none; cursor: pointer;
+  transition: color .25s ease;
+}
+.back:hover { color: var(--gold); }
+.dateLabel {
+  font-family: var(--font-display);
+  font-size: 9px;
+  letter-spacing: .35em;
+  color: var(--gold);
+  text-transform: uppercase;
+}
+
+.stage {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 8px;
+  gap: 16px;
+  text-align: center;
+}
+
+.kicker {
+  font-family: var(--font-display);
+  font-size: 9px;
+  letter-spacing: .35em;
+  color: var(--ink-dim);
+  text-transform: uppercase;
+}
+
+.name {
+  font-family: var(--font-display);
+  font-size: 22px;
+  letter-spacing: .12em;
+  color: var(--ink);
+  text-transform: uppercase;
+  margin-top: 14px;
+  line-height: 1.2;
+}
+
+.keywords {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 8px;
+}
+.chip {
+  font-family: var(--font-display);
+  font-size: 9px;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--gold);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  padding: 5px 12px;
+}
+
+.reading {
+  font-style: italic;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink-dim);
+  max-width: 330px;
+  text-align: left;
+  white-space: pre-wrap;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.18)), var(--bg-soft);
+  margin-top: 6px;
+}
+
+.actions {
+  margin-top: auto;
+  padding: 14px 0 6px;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.hint {
+  font-style: italic;
+  font-size: 13px;
+  color: var(--ink-dim);
+  margin-top: 8px;
+  max-width: 290px;
+}
+
+/* ── Гороскоп: самостоятельная карта-блок с золотой обводкой ─ */
+.horoscopeCard {
+  position: relative;
+  width: 100%;
+  max-width: 340px;
+  margin: 24px auto 8px;
+  padding: 18px;
+  border: 1px solid var(--line-hot, rgba(212, 175, 55, 0.45));
+  border-radius: 18px;
+  background:
+    radial-gradient(ellipse at top right, rgba(212, 175, 55, 0.08), transparent 60%),
+    linear-gradient(180deg, rgba(28, 13, 51, 0.55), rgba(8, 5, 16, 0.7));
+  box-shadow:
+    0 0 32px -10px rgba(212, 175, 55, 0.35),
+    inset 0 1px 0 rgba(255, 236, 180, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+/* Угловые «уголки манускрипта» — узнаваемая мистическая рамка */
+.horoscopeCard::before,
+.horoscopeCard::after {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--gold, #c9a14a);
+  opacity: 0.7;
+}
+.horoscopeCard::before {
+  top: 6px;
+  left: 6px;
+  border-right: none;
+  border-bottom: none;
+}
+.horoscopeCard::after {
+  bottom: 6px;
+  right: 6px;
+  border-left: none;
+  border-top: none;
+}
+
+.horoscopeHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.horoscopeKicker {
+  font-family: var(--font-display);
+  font-size: var(--kicker-size, 9.5px);
+  letter-spacing: var(--kicker-tracking, .28em);
+  color: var(--gold);
+  text-transform: uppercase;
+}
+
+.horoscopeZodiac {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.horoscopeSymbol {
+  font-family: var(--font-display);
+  font-size: 28px;
+  color: var(--gold-warm);
+  text-shadow: 0 0 12px rgba(212, 175, 55, 0.5);
+  line-height: 1;
+}
+
+.horoscopeName {
+  font-family: var(--font-display);
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  color: var(--ink);
+  text-transform: uppercase;
+}
+
+.horoscopeBody {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--ink);
+  white-space: pre-wrap;
+  text-align: justify;
+  hyphens: auto;
+  padding-top: 14px;
+  border-top: 1px dashed rgba(212, 175, 55, 0.25);
+}
+
+.horoscopeMuted {
+  color: var(--ink-dim);
+  font-size: 13px;
+}

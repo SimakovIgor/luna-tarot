@@ -1,0 +1,107 @@
+/* Дизайн-токены Luna. Все цвета/шрифты/тени — через CSS-переменные. */
+
+:root {
+  /* ── Background / fond ─────────────────────────────────── */
+  --bg-deep:  #08050f;
+  --bg-soft:  #110820;
+
+  /* ── Ink (текст) ────────────────────────────────────────── */
+  --ink:       #ede0c4;   /* основной текст — тёплое слоновое */
+  --ink-dim:   #8a7c5e;   /* приглушённый */
+  --ink-faint: #4a3e2a;   /* едва видимый, для caps-меток */
+
+  /* ── Gold — единственный акцент ─────────────────────────── */
+  --gold:      #c9a14a;
+  --gold-warm: #d9b876;
+  --gold-deep: #8a6a2f;
+
+  /* ── Линии и рамки ──────────────────────────────────────── */
+  --line:     rgba(201,161,74,.18);
+  --line-hot: rgba(201,161,74,.45);
+
+  /* ── Типографика ────────────────────────────────────────── */
+  /* Четыре семейства, чёткие роли:
+     mark     → wordmark «Luna» в редких местах (на карте, fallback хедера)
+     display  → ВСЕ UPPERCASE-кикеры/метки (Cinzel — декоративная антиква)
+     heading  → крупные заголовки экранов и имена карт (Cormorant — мистический serif)
+     body     → весь длинный читаемый текст: интерпретации, гороскоп, совместимость (Manrope — sans, очень читаемый)
+     italic   → атмосферный шёпот/подсказки/курсивные фразы (Cormorant italic) */
+  --font-display: "Cinzel", "Times New Roman", serif;
+  --font-heading: "Cormorant Garamond", "Georgia", serif;
+  --font-body:    "Manrope", "Inter", system-ui, -apple-system, sans-serif;
+  --font-italic:  "Cormorant Garamond", "Georgia", serif;
+  --font-mark:    "UnifrakturMaguntia", "Cinzel", serif;
+
+  /* Три размера для всего интерфейса. Не плодим под каждый случай. */
+  --text-xl: 20px;   /* заголовок экрана / большие имена */
+  --text-md: 14px;   /* основной интерфейс / имена в плитках */
+  --text-sm: 12px;   /* тело / описания / whisper */
+
+  /* Один акцент: тонкий золотой UPPERCASE-кикер для меток. */
+  --kicker-size: 9.5px;
+  --kicker-tracking: 0.28em;
+
+  /* Координаты «дневной карты» — общие для splash и hub.
+     Любой компонент, рендерящий day-card, использует эти переменные,
+     чтобы splash приземлялся ровно в позицию hub day-card. */
+  /* Размеры совпадают с TarotCard size='s' (138×224) — иначе TarotCard
+     выпирает за слот и налезает на соседний контент.
+     top = 110px от safe-area = достаточно ниже хедера (логотип 80px + 4px padding ≈ 84px),
+     чтобы карта не накрывала хедер, но и не съезжала на текст под ней.
+     При изменении высоты логотипа в AppHeader — синхронизируй это значение. */
+  --day-card-top: 110px;
+  --day-card-width: 138px;
+  --day-card-height: 224px;
+
+  /* ── Радиусы ────────────────────────────────────────────── */
+  --radius-card:  14px;
+  --radius-tarot: 12px;
+  --radius-pill:  999px;
+
+  /* ── Motion (длительности и easings) ────────────────────── */
+  --t-fast:   .18s;
+  --t-mid:    .55s;
+  --t-slow:   1.1s;
+  --t-flip:   1.4s;
+  --ease-out: cubic-bezier(.22,.9,.3,1.05);
+  --ease-flip: cubic-bezier(.6,-.1,.35,1.15);
+}
+
+/* ── Reset базовый ─────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { min-height: 100%; height: 100%; }
+#root { min-height: 100%; height: 100%; }
+body {
+  font-family: var(--font-body);
+  color: var(--ink);
+  /* Базовый — тёмный, по краям должен быть виньет (как на splash). */
+  background-color: #05030c;
+  /* Два слоя:
+     1) фиолетовое тёплое пятно по центру (как на splash);
+     2) тёмный виньет по периметру — усиливает контраст центр-края. */
+  background-image:
+    radial-gradient(ellipse 75% 55% at 50% 35%, rgba(40, 18, 70, 0.95) 0%, transparent 70%),
+    radial-gradient(circle at 50% 45%, transparent 30%, rgba(0, 0, 0, 0.55) 100%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  overflow-x: hidden;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Grain overlay поверх всего, ловит «киноплёнку» */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='4'/><feColorMatrix values='0 0 0 0 0.9  0 0 0 0 0.85  0 0 0 0 0.6  0 0 0 0.08 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  opacity: .32;
+  mix-blend-mode: overlay;
+}
+
+/* Стандартные ссылки/кнопки */
+a { color: inherit; text-decoration: none; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }

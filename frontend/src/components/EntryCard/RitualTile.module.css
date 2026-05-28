@@ -1,0 +1,93 @@
+.tile {
+  position: relative;
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background:
+    radial-gradient(ellipse at left, rgba(212, 175, 55, 0.06), transparent 60%),
+    linear-gradient(180deg, var(--bg-soft, #0d0a18) 0%, #06030f 100%);
+  border: 1px solid var(--line, rgba(212, 175, 55, 0.22));
+  border-radius: 12px;
+  color: inherit;
+  cursor: pointer;
+  overflow: hidden;
+  text-align: left;
+  min-height: 64px;
+  transition: border-color 0.3s ease, transform 0.2s ease;
+}
+.tile:hover {
+  border-color: var(--line-hot, rgba(212, 175, 55, 0.5));
+  transform: translateY(-1px);
+}
+
+.icon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gold-warm, #d9b876);
+  flex-shrink: 0;
+}
+.icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.title {
+  font-family: var(--font-display, 'Cinzel', serif);
+  font-size: 12.5px;
+  letter-spacing: 0.04em;
+  color: var(--ink, #ede0c4);
+  line-height: 1.2;
+  /* разрешаем wrap на 2 строки, длинные имена не обрезаются */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.meta {
+  font-family: var(--font-italic);
+  font-style: italic;
+  font-size: 11.5px;
+  color: var(--ink-dim, rgba(255, 255, 255, 0.6));
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Маленький бейдж с числом карт. Сидит в самом левом-верхнем углу плитки,
+   компактно — чтобы не накрывать ни иконку (она сдвинута чуть ниже за счёт
+   align-items:center в grid), ни заголовок справа. */
+.cardCount {
+  position: absolute;
+  top: 3px;
+  left: 4px;
+  font-family: var(--font-display);
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--gold-warm);
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid var(--line, rgba(212, 175, 55, 0.35));
+  border-radius: 999px;
+  padding: 1px 5px;
+  line-height: 1;
+  min-width: 14px;
+  text-align: center;
+  z-index: 2;
+  /* Тонкая золотая обводка-свечение, чтобы бейдж читался поверх любой иконки. */
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.5);
+}
