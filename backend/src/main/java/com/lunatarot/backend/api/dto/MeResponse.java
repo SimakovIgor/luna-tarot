@@ -15,6 +15,8 @@ public record MeResponse(
     ZodiacSign zodiac,
     Short lifePathNumber,
     LunarPhase lunarPhase,
-    BotConversationState conversationState
+    BotConversationState conversationState,
+    /** Сумма всех Telegram Stars донатов от пользователя. 0 если не донатил. */
+    long donatedStars
 ) {
 }

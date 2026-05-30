@@ -1,9 +1,15 @@
 .backdrop {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: rgba(5, 3, 12, 0.7);
   backdrop-filter: blur(6px);
   z-index: 100;
+  /* iOS WKWebView fix — без translate3d fixed едет со скроллом контейнера. */
+  -webkit-transform: translate3d(0, 0, 0);
+  transform: translate3d(0, 0, 0);
 }
 
 .sheet {
@@ -22,6 +28,9 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  /* iOS WKWebView fix. */
+  -webkit-transform: translate3d(0, 0, 0);
+  transform: translate3d(0, 0, 0);
 }
 
 .handle {

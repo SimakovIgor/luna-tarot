@@ -14,7 +14,7 @@ import java.util.List;
 @Component
 public class DtoMapper {
 
-    public MeResponse toMe(UserEntity user) {
+    public MeResponse toMe(UserEntity user, long donatedStars) {
         return new MeResponse(
             user.getTgUserId(),
             user.getName(),
@@ -23,7 +23,8 @@ public class DtoMapper {
             user.getZodiac(),
             user.getLifePathNumber(),
             user.getLunarPhase(),
-            user.getConversationState()
+            user.getConversationState(),
+            donatedStars
         );
     }
 

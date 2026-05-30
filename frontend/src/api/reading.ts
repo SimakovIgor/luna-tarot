@@ -2,6 +2,7 @@ import { api } from './client';
 
 export type ReadingType =
   | 'CARD_OF_DAY'
+  | 'YES_NO'
   | 'THREE_CARD'
   | 'LOVE'
   | 'CELTIC_CROSS'

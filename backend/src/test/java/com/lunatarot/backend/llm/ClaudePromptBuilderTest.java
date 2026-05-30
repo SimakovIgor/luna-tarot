@@ -28,7 +28,7 @@ class ClaudePromptBuilderTest {
 
         String prompt = ClaudeInterpreter.buildSystemPrompt(user, spread);
 
-        assertThat(prompt).contains("Прошлое — Настоящее — Будущее");
+        assertThat(prompt).contains("Три карты");
         assertThat(prompt).contains("Прошлое");
         assertThat(prompt).contains("Настоящее");
         assertThat(prompt).contains("Будущее");
@@ -55,7 +55,7 @@ class ClaudePromptBuilderTest {
 
         String prompt = ClaudeInterpreter.buildSystemPrompt(user, spread);
 
-        assertThat(prompt).contains("Кельтский крест");
+        assertThat(prompt).contains("Полный разбор");
         for (String label : List.of("Суть", "Вызов", "Корень", "Прошлое", "Сознание",
                                     "Ближайшее будущее", "Спрашивающий", "Окружение",
                                     "Надежды и страхи", "Итог")) {

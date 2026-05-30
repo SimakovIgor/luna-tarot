@@ -28,6 +28,7 @@ AI-таролог в Telegram. Мистический, на русском, на
 
 ## Стек
 
+### Application
 | Слой | Технология |
 |---|---|
 | Backend | Java 21, Spring Boot 3.5, Gradle (Kotlin DSL) |
@@ -37,7 +38,42 @@ AI-таролог в Telegram. Мистический, на русском, на
 | Mini App | Vite 6 + React 18 + TypeScript + framer-motion |
 | Шрифты | Cinzel + Cormorant Garamond + UnifrakturMaguntia |
 | Landing | Static HTML / nginx |
-| Infra | Docker + docker-compose |
+
+### Infrastructure (production)
+| Слой | Технология |
+|---|---|
+| VPS | Hetzner CX22 (2 vCPU, 4GB RAM, Falkenstein) |
+| Reverse proxy | Caddy 2.8 (auto-HTTPS через Let's Encrypt) |
+| Контейнеризация | Docker + docker-compose (`docker-compose.prod.yml`) |
+| DNS | DuckDNS (бесплатный поддомен, A-record на VPS IP) |
+| Деплой | scp tarball + `docker compose up -d --build` |
+| Bootstrap | `scripts/deploy.sh` (Docker install + firewall на чистом Ubuntu 24.04) |
+
+### Observability
+| Сервис | Где живёт | Что мониторит |
+|---|---|---|
+| **Uptime Kuma** | self-host на VPS (отдельный поддомен) | health-эндпоинты, Telegram-алерты при падении |
+| **Sentry Cloud** (sentry.io EU) | SaaS free tier (5K err/мес) | JS-ошибки фронта с stacktrace |
+| **PostHog Cloud** (us.posthog.com) | SaaS free tier (1M events/мес) | funnel, retention, session replay, кастомные track-points |
+| **Admin dashboard** (`/admin/`) | self-host, HTML+JSON | totals users/readings, breakdown по типам, новые юзеры по дням |
+
+**Track points в PostHog** (см. `src/observability.ts`):
+- `app_opened` — каждое открытие Mini App
+- `onboarding_completed` — успешное завершение онбординга
+- `spread_started` / `spread_completed` — старт/финиш расклада с `spread_id`
+- `share_clicked` / `share_completed` — клик и результат шеринга
+- Plus автозахват: pageviews, клики (autocapture)
+
+**identify**: при успешном auth биндим Telegram `tgUserId` к Sentry user + PostHog distinct ID — события дальше per-user (funnel, retention, error trace).
+
+### Dev tooling
+| Слой | Технология |
+|---|---|
+| Лок. dev | Cloudflare quick tunnel (`scripts/tunnel.sh`) для проброса в Telegram |
+| Тесты бэка | JUnit 5 + AssertJ + Testcontainers (Postgres 16) |
+| Статан бэка | Checkstyle 10 + PMD 7 + SpotBugs 4 + JaCoCo |
+| Тесты фронта | (пока нет, Phase 5 — Playwright) |
+| Lint фронта | ESLint 8 + TypeScript strict |
 | Качество | Checkstyle + PMD + SpotBugs + JaCoCo + Testcontainers Postgres |
 
 ---

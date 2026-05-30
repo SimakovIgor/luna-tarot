@@ -4,15 +4,22 @@ import { ScreenContainer } from '@/components/ScreenContainer/ScreenContainer';
 import { MoonBackground } from '@/components/MoonBackground/MoonBackground';
 import { OrnamentalDivider } from '@/components/OrnamentalDivider/OrnamentalDivider';
 import { GoldButton } from '@/components/GoldButton/GoldButton';
-import { type MeResponse, type Gender, updateMe } from '@/api/me';
+import { BackButton } from '@/components/BackButton/BackButton';
+import { RichText } from '@/components/RichText/RichText';
+import { type MeResponse, type Gender, updateMe, fetchMe } from '@/api/me';
+import { ZODIAC_INFO } from '@/zodiac';
 import { haptic } from '@/telegram/webapp';
 import { describeLunarPhase } from '@/util/format';
+import { SupportSheet } from '@/components/SupportSheet/SupportSheet';
 import styles from './ProfilePage.module.css';
 
 interface ProfilePageProps {
   me: MeResponse;
   onClose: () => void;
   onMeUpdated: (me: MeResponse) => void;
+  /** Гороскоп показывается в самом низу профиля (перехал с CardOfDay). */
+  horoscope: import('@/api/horoscope').HoroscopeResponse | null;
+  horoscopeError: string | null;
 }
 
 const ZODIAC_RU: Record<string, { sign: string; symbol: string }> = {
@@ -51,17 +58,28 @@ const LIFE_PATH_MEANING: Record<number, string> = {
   33: 'мастер любви',
 };
 
-export function ProfilePage({ me, onClose, onMeUpdated }: ProfilePageProps) {
+export function ProfilePage({ me, onClose, onMeUpdated, horoscope, horoscopeError }: ProfilePageProps) {
   const [editing, setEditing] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(false);
   const initial = (me.name?.trim()?.[0] ?? '·').toUpperCase();
   const zodiacInfo = me.zodiac ? ZODIAC_RU[me.zodiac] : null;
+  const donatedStars = me.donatedStars ?? 0;
+
+  const refetchMe = async () => {
+    try {
+      const fresh = await fetchMe();
+      onMeUpdated(fresh);
+    } catch {
+      // тихий ретрай в следующий заход
+    }
+  };
 
   return (
     <ScreenContainer>
       <MoonBackground />
       <div className={styles.shell}>
         <div className={styles.topbar}>
-          <button type="button" className={styles.back} onClick={onClose}>← Назад</button>
+          <BackButton onClick={onClose} />
           <span className={styles.topTitle}>профиль</span>
           <span style={{ width: 50 }} />
         </div>
@@ -105,6 +123,59 @@ export function ProfilePage({ me, onClose, onMeUpdated }: ProfilePageProps) {
           ✦ изменить данные
         </button>
 
+        <OrnamentalDivider label="свет для луны" />
+        <button
+          type="button"
+          className={styles.supportCard}
+          onClick={() => { haptic('light'); setSupportOpen(true); }}
+        >
+          <div className={styles.supportCardGlow} aria-hidden="true" />
+          <div className={styles.supportCardContent}>
+            <div className={styles.supportCardHeader}>
+              <span className={styles.supportCardGlyph} aria-hidden="true">✦</span>
+              <div className={styles.supportCardTitleBlock}>
+                <span className={styles.supportCardTitle}>Поддержать Луну</span>
+                <span className={styles.supportCardSub}>звёзды → свет в Зеркале</span>
+              </div>
+            </div>
+            {donatedStars > 0 && (
+              <div className={styles.supportCardTotal}>
+                <span className={styles.supportCardTotalLabel}>уже подарила</span>
+                <span className={styles.supportCardTotalValue}>
+                  {donatedStars} <span className={styles.supportCardTotalStar} aria-hidden>★</span>
+                </span>
+              </div>
+            )}
+          </div>
+        </button>
+
+        <OrnamentalDivider label="гороскоп на сегодня" />
+        <div className={styles.horoscopeBlock}>
+          <div className={styles.horoscopeHeader}>
+            {/* Берём знак из me (а не из horoscope) — иначе после смены ДР
+                символ в шапке остаётся старым до завтрашнего гороскопа. */}
+            {me.zodiac && ZODIAC_INFO[me.zodiac as keyof typeof ZODIAC_INFO] && (
+              <>
+                <span className={styles.horoscopeSymbol}>
+                  {ZODIAC_INFO[me.zodiac as keyof typeof ZODIAC_INFO].symbol}
+                </span>
+                <span className={styles.horoscopeName}>
+                  {ZODIAC_INFO[me.zodiac as keyof typeof ZODIAC_INFO].sign}
+                </span>
+              </>
+            )}
+          </div>
+          <div className={styles.horoscopeBody}>
+            {horoscope ? (
+              <RichText source={horoscope.text} />
+            ) : horoscopeError ? (
+              <span className={styles.horoscopeMuted}>гороскоп не загрузился</span>
+            ) : (
+              <span className={styles.horoscopeMuted}>Луна шепчет твой день…</span>
+            )}
+          </div>
+        </div>
+
         <OrnamentalDivider label="о Луне" />
 
         <details className={styles.faq}>
@@ -141,6 +212,12 @@ export function ProfilePage({ me, onClose, onMeUpdated }: ProfilePageProps) {
           />
         )}
       </AnimatePresence>
+
+      <SupportSheet
+        open={supportOpen}
+        onClose={() => setSupportOpen(false)}
+        onDonated={refetchMe}
+      />
     </ScreenContainer>
   );
 }
@@ -199,9 +276,13 @@ function EditSheet({ me, onClose, onSaved }: EditSheetProps) {
     }
     setBusy(true);
     try {
-      const updated = await updateMe({ name: trimmedName, gender, birthDate });
+      await updateMe({ name: trimmedName, gender, birthDate });
+      // Защита от рассинхрона: вторым запросом перечитываем профиль,
+      // чтобы UI гарантированно показывал актуальный zodiac/lifePath/lunarPhase
+      // даже если бэк-кэш или прокси отдали что-то странное.
+      const fresh = await fetchMe();
       haptic('medium');
-      onSaved(updated);
+      onSaved(fresh);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'не удалось сохранить');
     } finally {

@@ -13,6 +13,8 @@ import { describeLunarPhase } from '@/util/format';
 import { haptic } from '@/telegram/webapp';
 import styles from './OnboardingPage.module.css';
 
+import { track } from '@/observability';
+
 interface OnboardingPageProps {
   /** Колбэк: онбординг успешно завершён, перейти на Hub. */
   onComplete: (me: MeResponse) => void;
@@ -191,7 +193,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
                   type="text"
                   inputMode="text"
                   autoComplete="given-name"
-                  placeholder="Игорь"
+                  placeholder="Например, Алиса"
                   value={name}
                   onChange={(e) => { setError(null); setName(e.target.value); }}
                   autoFocus
@@ -272,7 +274,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
             )}
 
             {step === 'tour' && me && (
-              <TourStep onFinish={() => onComplete(me)} />
+              <TourStep onFinish={() => { track('onboarding_completed', { zodiac: me.zodiac }); onComplete(me); }} />
             )}
           </AnimatePresence>
         </div>

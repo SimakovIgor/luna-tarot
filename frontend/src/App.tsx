@@ -9,6 +9,7 @@ import { IntroSplash } from './components/IntroSplash/IntroSplash';
 import { DayCard } from './components/DayCard/DayCard';
 import { useCardOfDay } from './hooks/useCardOfDay';
 import { useHoroscope } from './hooks/useHoroscope';
+import { identify } from './observability';
 import './App.css';
 
 type AppState =
@@ -36,8 +37,45 @@ export function App() {
   useEffect(() => {
     tgReady();
     if (isDesignReview || isOnboardingDemo || isReadingDemo || isDiaryDemo) return;
-    void bootstrap().then(setState);
+    void bootstrap().then((next) => {
+      setState(next);
+      // Сразу как только auth прошёл — биндим Telegram user id к Sentry+PostHog
+      // событиям. Дальше funnel/retention/ошибки видны per-user.
+      if (next.kind === 'ready') {
+        identify(next.me.tgUserId, {
+          name: next.me.name,
+          zodiac: next.me.zodiac,
+          conversationState: next.me.conversationState,
+        });
+      }
+    });
   }, [isDesignReview, isOnboardingDemo, isReadingDemo, isDiaryDemo]);
+
+  // Прелоад ВСЕЙ колоды (78 карт + рубашка) на старте приложения. Cache-Control
+  // на бэке = immutable/1 year, поэтому после первой загрузки картинки лежат
+  // в браузере вечно — никаких повторных запросов при каждом раскладе. Грузим
+  // батчами по 6 во время idle, чтобы не мешать первичной отрисовке.
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const { default: manifest } = await import('./cardManifest.json');
+      const list = manifest as string[];
+      const idle: (cb: () => void) => void = ('requestIdleCallback' in window)
+        ? (cb) => (window as Window & { requestIdleCallback: (fn: () => void, opts?: object) => void }).requestIdleCallback(cb, { timeout: 1500 })
+        : (cb) => window.setTimeout(cb, 250);
+      const preloadBatch = (idx: number) => {
+        if (cancelled || idx >= list.length) return;
+        const end = Math.min(idx + 6, list.length);
+        for (let i = idx; i < end; i++) {
+          const img = new Image();
+          img.src = `/app/cards/${list[i]}`;
+        }
+        idle(() => preloadBatch(end));
+      };
+      idle(() => preloadBatch(0));
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const isDemo = isDesignReview || isOnboardingDemo || isReadingDemo || isDiaryDemo;
   const showSplash = !isDemo && !splashGone;
@@ -60,18 +98,19 @@ export function App() {
   if (isDiaryDemo) {
     return <DiaryDemoPage />;
   }
-  // DayCard видна в ДВУХ местах:
-  //   1) splash — для всех (часть intro-эффекта);
-  //   2) хаб — только когда юзер прошёл онбординг и реально на главном.
-  // Онбординг, Profile, Reading, Diary — карты нет.
-  // hubReady в условии гарантирует что карта не появится на онбординге
-  // (там conversationState !== READY → hubReady=false → второй OR не сработает).
+  // DayCard на App-уровне рендерится ТОЛЬКО во время splash — как fixed-overlay
+  // для cinematic intro-эффекта. После splash карта живёт inline внутри HubPage
+  // (часть скроллящегося потока, без position:fixed) — так она ведёт себя
+  // предсказуемо в Telegram WebView без багов containing block.
   const baseShow = !isDemo && state.kind !== 'no-telegram' && state.kind !== 'auth-failed';
-  const showDayCard = baseShow && (showSplash || (hubReady && activeSubView === 'hub'));
+  const showSplashCard = baseShow && showSplash;
+  // activeSubView нужно ещё для других целей — оставлен в state, но не влияет на карту здесь.
+  void activeSubView;
+  void hubReady;
 
   return (
     <>
-      {showDayCard && (
+      {showSplashCard && (
         <DayCard
           cardOfDay={cardOfDay}
           flipped={dayFlipped}
@@ -136,6 +175,8 @@ function renderBody(
       cardOfDay={body.cardOfDay}
       dayFlipped={body.dayFlipped}
       onDayFlip={body.onDayFlip}
+      horoscope={body.horoscope}
+      horoscopeError={body.horoscopeError}
       reveal={body.reveal}
       onSubViewChange={body.onSubViewChange}
     />

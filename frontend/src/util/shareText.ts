@@ -10,6 +10,8 @@ import { ZODIAC_INFO } from '@/zodiac';
  */
 export function buildShareText(spreadId: SpreadId): string {
   switch (spreadId) {
+    case 'YES_NO':
+      return '✦ Спросил Луну «да или нет» — карты ответили. Спроси и ты:';
     case 'THREE_CARD':
       return '✦ Луна показала мне расклад на прошлое, настоящее и будущее. Сделай свой:';
     case 'LOVE':

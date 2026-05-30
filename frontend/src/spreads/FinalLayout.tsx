@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import type { ReadingCard } from '@/api/reading';
 import { cardImageUrl } from '@/api/reading';
 import { CardBack } from '@/components/TarotCard/CardBack';
@@ -25,23 +25,53 @@ const FIRST_DELAY_MS = 250;
  *  - pentagram:   5 в форме треугольника-сердца
  *  - celticCross: 6 крест + 4 штаб справа (классика)
  *  - wheel:       12 по кругу как циферблат
+ *
+ * Тап по карте (после флипа) → overlay с увеличенной версией. Тап overlay → закрыть.
  */
 export function FinalLayout({ cards, spread, revealOnMount = false }: FinalLayoutProps) {
+  const [zoomedIdx, setZoomedIdx] = useState<number | null>(null);
+  const handleTap = (idx: number) => {
+    haptic('light');
+    setZoomedIdx(idx);
+  };
+  const layoutProps = {
+    cards,
+    spread,
+    revealOnMount: revealOnMount ?? false,
+    onTap: handleTap,
+  };
+  let layout: React.ReactNode;
   switch (spread.finalLayout.kind) {
-    case 'row':
-      return <RowLayout cards={cards} spread={spread} revealOnMount={revealOnMount ?? false} />;
-    case 'pentagram':
-      return <PentagramLayout cards={cards} spread={spread} revealOnMount={revealOnMount ?? false} />;
-    case 'celticCross':
-      return <CelticCrossLayout cards={cards} spread={spread} revealOnMount={revealOnMount ?? false} />;
-    case 'wheel':
-      return <WheelLayout cards={cards} spread={spread} revealOnMount={revealOnMount ?? false} />;
+    case 'row': layout = <RowLayout {...layoutProps} />; break;
+    case 'pentagram': layout = <PentagramLayout {...layoutProps} />; break;
+    case 'celticCross': layout = <CelticCrossLayout {...layoutProps} />; break;
+    case 'wheel': layout = <WheelLayout {...layoutProps} />; break;
   }
+  return (
+    <>
+      {layout}
+      <AnimatePresence>
+        {zoomedIdx !== null && (
+          <CardZoomOverlay
+            key={`zoom-${zoomedIdx}`}
+            card={cards[zoomedIdx]}
+            positionLabel={spread.positions[zoomedIdx]?.longLabel ?? spread.positions[zoomedIdx]?.label ?? `№${zoomedIdx + 1}`}
+            onClose={() => setZoomedIdx(null)}
+          />
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
+
+interface InnerLayoutProps extends FinalLayoutProps {
+  revealOnMount: boolean;
+  onTap: (idx: number) => void;
 }
 
 // ── 3-card row ────────────────────────────────────────────────────────────
 
-function RowLayout({ cards, spread, revealOnMount }: FinalLayoutProps) {
+function RowLayout({ cards, spread, revealOnMount, onTap }: InnerLayoutProps) {
   return (
     <div className={styles.row}>
       {cards.map((rc, i) => (
@@ -54,6 +84,7 @@ function RowLayout({ cards, spread, revealOnMount }: FinalLayoutProps) {
           flipDelayMs={revealOnMount ? FIRST_DELAY_MS + i * STAGGER_MS : 0}
           revealOnMount={revealOnMount ?? false}
           size="m"
+          onTap={() => onTap(i)}
         />
       ))}
     </div>
@@ -70,7 +101,7 @@ const PENTAGRAM_POSITIONS: Array<{ left: string; top: string }> = [
   { left: '55%', top: '70%' },
 ];
 
-function PentagramLayout({ cards, spread, revealOnMount }: FinalLayoutProps) {
+function PentagramLayout({ cards, spread, revealOnMount, onTap }: InnerLayoutProps) {
   return (
     <div className={styles.pentagram}>
       {cards.map((rc, i) => (
@@ -84,6 +115,7 @@ function PentagramLayout({ cards, spread, revealOnMount }: FinalLayoutProps) {
           revealOnMount={revealOnMount ?? false}
           size="s"
           absolutePos={PENTAGRAM_POSITIONS[i]}
+          onTap={() => onTap(i)}
         />
       ))}
     </div>
@@ -103,7 +135,10 @@ interface CCSlot {
 
 const CELTIC_CROSS_SLOTS: CCSlot[] = [
   { left: 80, top: 110, z: 2 },
-  { left: 80, top: 110, rotate: 90, z: 3 },
+  // Слот «Вызов» (rotate:90) ставится поверх «Сути» с лёгким смещением
+  // (8px вправо, 12px вниз) — традиционный крест таро, но без визуального
+  // слияния двух карт в одну «задвоившуюся».
+  { left: 88, top: 122, rotate: 90, z: 3 },
   { left: 80, top: 220 },
   { left: 5,  top: 110 },
   { left: 80, top: 0 },
@@ -118,7 +153,7 @@ const CC_STAFF_SLOTS: CCSlot[] = [
   { left: CC_STAFF_X, top: 0 },
 ];
 
-function CelticCrossLayout({ cards, spread, revealOnMount }: FinalLayoutProps) {
+function CelticCrossLayout({ cards, spread, revealOnMount, onTap }: InnerLayoutProps) {
   return (
     <div className={styles.celticCross}>
       {cards.map((rc, i) => {
@@ -138,6 +173,7 @@ function CelticCrossLayout({ cards, spread, revealOnMount }: FinalLayoutProps) {
             zIndex={slot.z}
             width={CC_LEFT_BLOCK.width}
             height={CC_LEFT_BLOCK.height}
+            onTap={() => onTap(i)}
           />
         );
       })}
@@ -150,7 +186,7 @@ function CelticCrossLayout({ cards, spread, revealOnMount }: FinalLayoutProps) {
 const WHEEL_RADIUS = 110;
 const WHEEL_CENTER = 140;
 
-function WheelLayout({ cards, spread, revealOnMount }: FinalLayoutProps) {
+function WheelLayout({ cards, spread, revealOnMount, onTap }: InnerLayoutProps) {
   return (
     <div className={styles.wheel}>
       {cards.map((rc, i) => {
@@ -177,6 +213,7 @@ function WheelLayout({ cards, spread, revealOnMount }: FinalLayoutProps) {
             width={56}
             height={84}
             captionBelow={false}
+            onTap={() => onTap(i)}
           />
         );
       })}
@@ -204,6 +241,8 @@ interface FinalThumbProps {
   width?: number;
   height?: number;
   captionBelow?: boolean;
+  /** Тап по миниатюре (только когда карта уже флипнута). Открывает zoom-overlay. */
+  onTap?: () => void;
 }
 
 function FinalThumb({
@@ -220,6 +259,7 @@ function FinalThumb({
   width,
   height,
   captionBelow = false,
+  onTap,
 }: FinalThumbProps) {
   const url = cardImageUrl(rc.card);
   const baseRotate = rc.reversed ? 180 : 0;
@@ -241,6 +281,7 @@ function FinalThumb({
     ? { position: 'absolute', ...absolutePos, zIndex }
     : {};
 
+  const tappable = flipped && onTap;
   return (
     <motion.div
       className={styles.thumbCol}
@@ -249,13 +290,17 @@ function FinalThumb({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: appearDelayMs / 1000, duration: 0.45, ease: [0.2, 0.85, 0.3, 1] }}
     >
-      <div
+      <button
+        type="button"
         className={styles.flipScene}
         style={{
           width: dim.w,
           height: dim.h,
           transform: totalRotate ? `rotate(${totalRotate}deg)` : undefined,
+          cursor: tappable ? 'pointer' : 'default',
         }}
+        onClick={tappable ? onTap : undefined}
+        aria-label={tappable ? `Открыть карту: ${rc.card.nameRu}` : undefined}
       >
         <div className={`${styles.flipCard} ${flipped ? styles.flipped : ''}`}>
           <div className={`${styles.flipFace} ${styles.flipBack}`}>
@@ -265,8 +310,58 @@ function FinalThumb({
             {url && <img src={url} alt={rc.card.nameRu} />}
           </div>
         </div>
-      </div>
+      </button>
       {captionBelow && <div className={styles.caption}>{label}</div>}
+    </motion.div>
+  );
+}
+
+// ── CardZoomOverlay ──────────────────────────────────────────────────
+// Полноэкранный модал с увеличенной картой. Тап по подложке или карте → закрыть.
+// Экспортирован для переиспользования из PickedCardsLayer (ReadingFlowPage),
+// где он рендерит зум для row/pentagram/celticCross/wheel-карт, живущих в
+// persistent-слое поверх AnimatePresence.
+
+export interface CardZoomOverlayProps {
+  card: ReadingCard;
+  positionLabel: string;
+  onClose: () => void;
+}
+
+export function CardZoomOverlay({ card, positionLabel, onClose }: CardZoomOverlayProps) {
+  const url = cardImageUrl(card.card);
+  const reversed = card.reversed;
+  return (
+    <motion.div
+      className={styles.zoomBackdrop}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.25 }}
+      onClick={onClose}
+      role="dialog"
+      aria-label={`Карта: ${card.card.nameRu}`}
+    >
+      <motion.div
+        className={styles.zoomCard}
+        initial={{ scale: 0.6, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.6, opacity: 0, y: 20 }}
+        transition={{ duration: 0.35, ease: [0.22, 0.85, 0.3, 1.05] }}
+        onClick={(e) => { e.stopPropagation(); onClose(); }}
+      >
+        <div
+          className={styles.zoomCardImage}
+          style={{ transform: reversed ? 'rotate(180deg)' : undefined }}
+        >
+          {url && <img src={url} alt={card.card.nameRu} />}
+        </div>
+        <div className={styles.zoomPosition}>{positionLabel}</div>
+        <div className={styles.zoomName}>
+          {card.card.nameRu}{reversed ? ' (перевёрнута)' : ''}
+        </div>
+        <div className={styles.zoomHint}>тап чтобы вернуть</div>
+      </motion.div>
     </motion.div>
   );
 }

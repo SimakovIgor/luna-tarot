@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { animate, motion, useMotionValue } from 'framer-motion';
 import { TarotCard } from '@/components/TarotCard/TarotCard';
 import { CardBack } from '@/components/TarotCard/CardBack';
@@ -16,6 +17,13 @@ interface DayCardProps {
   spinning: boolean;
   /** Можно ли тапать (false пока splash). */
   interactive: boolean;
+  /**
+   * Режим:
+   *   false (default) — fixed-overlay для splash. position:fixed + portal в body.
+   *   true            — inline-блок в потоке HubPage. Скроллится вместе со
+   *                     страницей, никакого position:fixed.
+   */
+  inline?: boolean;
 }
 
 /** Скорость бесконечного вращения, deg/sec. */
@@ -29,7 +37,7 @@ const SPIN_SPEED_DEG_PER_SEC = 60; // = 6с на оборот
  * выключается, карта продолжает движение **всегда вперёд** до ближайшего
  * целого оборота. Никаких реверсов «карта пошла назад».
  */
-export function DayCard({ cardOfDay, flipped, onFlip, spinning, interactive }: DayCardProps) {
+export function DayCard({ cardOfDay, flipped, onFlip, spinning, interactive, inline = false }: DayCardProps) {
   const rotateY = useMotionValue(0);
   const [spinSettled, setSpinSettled] = useState(false);
   const firstCard = cardOfDay?.cards?.[0];
@@ -72,20 +80,23 @@ export function DayCard({ cardOfDay, flipped, onFlip, spinning, interactive }: D
     return () => controls.stop();
   }, [spinning, rotateY]);
 
-  // Пока splash активен (interactive=false) — карта поверх splash bg (z-index 260).
-  // Когда splash полностью ушёл (interactive=true) — карта опускается под UI.
-  // Раньше переключали по spinning — но splash продолжает fade-out 850ms после
-  // settle, в этот промежуток карта закрывалась splash bg.
-  const slotClass = !interactive ? `${styles.slot} ${styles.elevated}` : styles.slot;
+  // ── Inline-режим (внутри HubPage): просто блок в потоке, без position:fixed.
+  // Карта скроллится вместе с остальным контентом — никаких WKWebView-багов
+  // с containing block нет, потому что нет fixed позиционирования.
+  // Inviting — карта готова к тапу (загружена, settled, не флипнута) → усиленное
+  // золотое свечение зовёт коснуться.
+  const isInviting = inline && spinSettled && !!cardOfDay && !flipped && interactive;
+  const baseClass = inline
+    ? styles.slotInline
+    : !interactive
+      ? `${styles.slot} ${styles.elevated}`
+      : styles.slot;
+  const slotClass = isInviting ? `${baseClass} ${styles.inviting}` : baseClass;
 
-  return (
+  const content = (
     <div className={slotClass}>
       <span className={styles.glow} aria-hidden="true" />
       {(!cardOfDay || !spinSettled) ? (
-        // Рубашка с обеих сторон — пока не загружена карта дня ИЛИ пока крутящаяся
-        // settle-анимация не доехала до целого 360°. Это закрывает дыру между моментом
-        // spinning=false и моментом, когда rotateY реально остановился — раньше там
-        // успевал мелькнуть TarotCard вверх ногами.
         <motion.div className={styles.fallback} style={{ rotateY }}>
           <div className={styles.fallbackFace}><CardBack uid="day-fallback" /></div>
           <div className={styles.fallbackBack}><CardBack uid="day-fallback-mirror" /></div>
@@ -106,4 +117,8 @@ export function DayCard({ cardOfDay, flipped, onFlip, spinning, interactive }: D
       )}
     </div>
   );
+
+  // Inline — никакого портала, рендерим напрямую.
+  // Fixed-режим — портал в body, чтобы containing block был viewport.
+  return inline ? content : createPortal(content, document.body);
 }

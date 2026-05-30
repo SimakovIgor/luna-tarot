@@ -9,6 +9,7 @@ import com.lunatarot.backend.domain.model.enums.BotConversationState;
 import com.lunatarot.backend.domain.repository.UserRepository;
 import com.lunatarot.backend.service.EsotericProfile;
 import com.lunatarot.backend.service.EsotericProfileCalculator;
+import com.lunatarot.backend.service.donation.DonationService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -25,13 +26,16 @@ public class MeController {
 
     private final UserRepository userRepository;
     private final EsotericProfileCalculator esotericProfileCalculator;
+    private final DonationService donationService;
     private final DtoMapper mapper;
 
     public MeController(UserRepository userRepository,
                         EsotericProfileCalculator esotericProfileCalculator,
+                        DonationService donationService,
                         DtoMapper mapper) {
         this.userRepository = userRepository;
         this.esotericProfileCalculator = esotericProfileCalculator;
+        this.donationService = donationService;
         this.mapper = mapper;
     }
 
@@ -39,7 +43,8 @@ public class MeController {
     public ResponseEntity<MeResponse> me(HttpServletRequest request) {
         Long tgUserId = (Long) request.getAttribute(AuthFilter.ATTR_TG_USER_ID);
         UserEntity user = userRepository.findByTgUserId(tgUserId).orElseThrow();
-        return ResponseEntity.ok(mapper.toMe(user));
+        long donated = donationService.totalStarsByUser(tgUserId);
+        return ResponseEntity.ok(mapper.toMe(user, donated));
     }
 
     /**
@@ -60,6 +65,7 @@ public class MeController {
         user.setLunarPhase(profile.lunarPhase());
         user.setConversationState(BotConversationState.READY);
 
-        return ResponseEntity.ok(mapper.toMe(user));
+        long donated = donationService.totalStarsByUser(tgUserId);
+        return ResponseEntity.ok(mapper.toMe(user, donated));
     }
 }

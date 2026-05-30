@@ -7,6 +7,7 @@ import { WhisperText } from '@/components/WhisperText/WhisperText';
 import { GoldButton } from '@/components/GoldButton/GoldButton';
 import { OutcomeSheet } from '@/components/OutcomeSheet/OutcomeSheet';
 import { OrbitalLoader } from '@/components/OrbitalLoader/OrbitalLoader';
+import { BackButton } from '@/components/BackButton/BackButton';
 import {
   cardImageUrl,
   clearOutcome,
@@ -52,7 +53,7 @@ export function DiaryPage({ onClose }: DiaryPageProps) {
       <MoonBackground />
       <div className={styles.shell}>
         <div className={styles.topbar}>
-          <button type="button" className={styles.back} onClick={onClose}>← Назад</button>
+          <BackButton onClick={onClose} />
           <span className={styles.title}>дневник</span>
           <span style={{ width: 50 }} />
         </div>

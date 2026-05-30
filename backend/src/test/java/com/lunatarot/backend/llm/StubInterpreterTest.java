@@ -69,7 +69,7 @@ class StubInterpreterTest {
         ));
 
         assertThat(text).contains("Я", "Партнёр", "Связь", "Препятствие", "Исход");
-        assertThat(text).contains("Любовный треугольник");
+        assertThat(text).contains("О любви");
     }
 
     private static UserEntity user(String name, Gender gender) {

@@ -37,6 +37,7 @@ export function RitualTile({ icon, title, meta, cardCount, delayMs = 0, onClick 
         <span className={styles.title}>{title}</span>
         <span className={styles.meta}>{meta}</span>
       </span>
+      <span className={styles.arrow} aria-hidden="true">→</span>
       {cardCount !== undefined && (
         <span className={styles.cardCount} aria-label={`${cardCount} карт`}>
           {cardCount}

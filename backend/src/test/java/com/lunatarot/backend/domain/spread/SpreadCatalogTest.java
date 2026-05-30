@@ -43,6 +43,7 @@ class SpreadCatalogTest {
         assertThat(catalog.userSelectable())
             .extracting(Spread::type)
             .containsExactly(
+                ReadingType.YES_NO,
                 ReadingType.THREE_CARD,
                 ReadingType.LOVE,
                 ReadingType.CELTIC_CROSS,

@@ -46,10 +46,16 @@
      чтобы splash приземлялся ровно в позицию hub day-card. */
   /* Размеры совпадают с TarotCard size='s' (138×224) — иначе TarotCard
      выпирает за слот и налезает на соседний контент.
-     top = 110px от safe-area = достаточно ниже хедера (логотип 80px + 4px padding ≈ 84px),
-     чтобы карта не накрывала хедер, но и не съезжала на текст под ней.
-     При изменении высоты логотипа в AppHeader — синхронизируй это значение. */
-  --day-card-top: 110px;
+
+     ВАЖНО: значение должно совпадать с inline-позицией карты на HubPage,
+     иначе при splash→hub переходе карта дёрнется. Считается так:
+       AppHeader (padding-top 4 + logo 80 = 84)
+     + dayCardBlock margin-top (14)
+     + dayCardLabel (font 10.5 line-height 1.1 ≈ 12)
+     + dayCardBlock gap (12)
+     = 122px от .device padding-top (safe-area + 8px).
+     При изменении высоты логотипа или отступов в HubPage синхронизируй. */
+  --day-card-top: 122px;
   --day-card-width: 138px;
   --day-card-height: 224px;
 
@@ -69,8 +75,23 @@
 
 /* ── Reset базовый ─────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { min-height: 100%; height: 100%; }
-#root { min-height: 100%; height: 100%; }
+/* html/body фиксированы по размеру viewport — единственный скроллящийся
+   элемент это .device. Это критично для iOS WKWebView (Telegram Mini App):
+   если body скроллится — `position: fixed` начинает ехать вместе со скроллом
+   (containing block смещается). Поэтому body жёстко прибит к viewport. */
+html, body {
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+#root {
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  overflow: hidden;
+}
 body {
   font-family: var(--font-body);
   color: var(--ink);
@@ -78,14 +99,13 @@ body {
   background-color: #05030c;
   /* Два слоя:
      1) фиолетовое тёплое пятно по центру (как на splash);
-     2) тёмный виньет по периметру — усиливает контраст центр-края. */
+     2) тёмный виньет по периметру — усиливает контраст центр-края.
+     background-attachment: fixed УБРАН — он ломает position:fixed у детей
+     в iOS WKWebView (известный баг). */
   background-image:
     radial-gradient(ellipse 75% 55% at 50% 35%, rgba(40, 18, 70, 0.95) 0%, transparent 70%),
     radial-gradient(circle at 50% 45%, transparent 30%, rgba(0, 0, 0, 0.55) 100%);
-  background-attachment: fixed;
   background-repeat: no-repeat;
-  overflow-x: hidden;
-  min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

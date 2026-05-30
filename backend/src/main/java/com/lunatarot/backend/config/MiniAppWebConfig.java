@@ -34,10 +34,13 @@ public class MiniAppWebConfig implements WebMvcConfigurer {
             .addResourceLocations("classpath:/static/app/assets/")
             .setCacheControl(CacheControl.maxAge(365, TimeUnit.DAYS).immutable());
 
-        // 2) Картинки карт и прочие статичные ресурсы — 1 час.
+        // 2) Картинки карт — immutable на год. Файлы картинок никогда не меняются
+        //    (стандартная колода Таро), поэтому браузеру разрешено держать их в
+        //    кэше навсегда. Это убирает повторные скачивания при каждом раскладе —
+        //    после первой загрузки карта остаётся локально.
         registry.addResourceHandler("/app/cards/**")
             .addResourceLocations("classpath:/static/app/cards/")
-            .setCacheControl(CacheControl.maxAge(1, TimeUnit.HOURS));
+            .setCacheControl(CacheControl.maxAge(365, TimeUnit.DAYS).immutable());
 
         // 3) Catch-all: index.html, fallback для SPA-роутинга и прочее — no-store.
         //    Telegram WebView получает свежий HTML при каждом открытии Mini App.

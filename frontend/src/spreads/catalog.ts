@@ -5,6 +5,7 @@
  * но layout-геометрия (где именно карты в финале) — чисто UI и живёт только тут.
  */
 export type SpreadId =
+  | 'YES_NO'
   | 'THREE_CARD'
   | 'LOVE'
   | 'CELTIC_CROSS'
@@ -47,11 +48,25 @@ export interface SpreadDescriptor {
 }
 
 export const SPREADS: Record<SpreadId, SpreadDescriptor> = {
+  YES_NO: {
+    id: 'YES_NO',
+    displayName: 'Да или нет',
+    shortHint: 'короткий ответ на закрытый вопрос',
+    longHint: 'спроси то, что требует ответа «да» или «нет» — Луна даст вердикт за три карты',
+    cardCount: 3,
+    positions: [
+      { index: 0, label: 'За' },
+      { index: 1, label: 'Против' },
+      { index: 2, label: 'Итог' },
+    ],
+    finalLayout: { kind: 'row' },
+    accent: '?',
+  },
   THREE_CARD: {
     id: 'THREE_CARD',
-    displayName: 'Путь во времени',
-    shortHint: 'что было · что есть · что будет',
-    longHint: 'три карты: где была энергия, где она сейчас, куда движется',
+    displayName: 'Три карты',
+    shortHint: 'прошлое · настоящее · будущее',
+    longHint: 'самый понятный расклад: где была энергия, где она сейчас и куда движется',
     cardCount: 3,
     positions: [
       { index: 0, label: 'Прошлое' },
@@ -63,9 +78,9 @@ export const SPREADS: Record<SpreadId, SpreadDescriptor> = {
   },
   LOVE: {
     id: 'LOVE',
-    displayName: 'Любовь',
-    shortHint: 'я · он · что между нами',
-    longHint: 'пять карт: ты, другой человек и то, что между вами',
+    displayName: 'О любви',
+    shortHint: 'пять карт о ваших отношениях',
+    longHint: 'ты, другой человек, связь между вами, препятствие и куда идёте вместе',
     cardCount: 5,
     positions: [
       { index: 0, label: 'Я' },
@@ -79,9 +94,9 @@ export const SPREADS: Record<SpreadId, SpreadDescriptor> = {
   },
   CELTIC_CROSS: {
     id: 'CELTIC_CROSS',
-    displayName: 'Кельтский крест',
-    shortHint: 'полная картина решения',
-    longHint: 'десять позиций для важного вопроса — суть, вызов, прошлое, итог',
+    displayName: 'Полный разбор',
+    shortHint: 'десять карт на серьёзный вопрос',
+    longHint: 'десять позиций — суть, вызов, корень, прошлое, окружение, надежды и итог',
     cardCount: 10,
     positions: [
       { index: 0, label: 'Суть' },
@@ -100,9 +115,9 @@ export const SPREADS: Record<SpreadId, SpreadDescriptor> = {
   },
   YEAR_WHEEL: {
     id: 'YEAR_WHEEL',
-    displayName: 'Год вперёд',
-    shortHint: 'по карте на каждый месяц',
-    longHint: 'двенадцать карт по часовой стрелке — куда ведёт следующий год',
+    displayName: 'На год вперёд',
+    shortHint: 'двенадцать карт по месяцам',
+    longHint: 'на каждый из 12 месяцев — куда ведёт следующий год',
     cardCount: 12,
     positions: Array.from({ length: 12 }, (_, i) => ({
       index: i,
@@ -115,6 +130,7 @@ export const SPREADS: Record<SpreadId, SpreadDescriptor> = {
 };
 
 export const SPREAD_LIST: SpreadDescriptor[] = [
+  SPREADS.YES_NO,
   SPREADS.THREE_CARD,
   SPREADS.LOVE,
   SPREADS.CELTIC_CROSS,

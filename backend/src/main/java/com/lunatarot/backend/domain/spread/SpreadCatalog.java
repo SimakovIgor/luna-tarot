@@ -20,6 +20,7 @@ public class SpreadCatalog {
     public SpreadCatalog() {
         this.catalog = Map.of(
             ReadingType.CARD_OF_DAY, cardOfDay(),
+            ReadingType.YES_NO, yesNo(),
             ReadingType.THREE_CARD, threeCard(),
             ReadingType.LOVE, love(),
             ReadingType.CELTIC_CROSS, celticCross(),
@@ -38,6 +39,7 @@ public class SpreadCatalog {
     /** Все спреды, которые юзер может явно выбрать на хабе (без CARD_OF_DAY — он отдельным флоу). */
     public List<Spread> userSelectable() {
         return List.of(
+            catalog.get(ReadingType.YES_NO),
             catalog.get(ReadingType.THREE_CARD),
             catalog.get(ReadingType.LOVE),
             catalog.get(ReadingType.CELTIC_CROSS),
@@ -58,11 +60,24 @@ public class SpreadCatalog {
         );
     }
 
+    private static Spread yesNo() {
+        return new Spread(
+            ReadingType.YES_NO,
+            "Да или нет",
+            "три карты на закрытый вопрос",
+            List.of(
+                new SpreadPosition(0, "За", "что говорит в пользу «да» — какие факторы / силы поддерживают вариант сделать"),
+                new SpreadPosition(1, "Против", "что говорит в пользу «нет» — какие факторы / силы предостерегают, тормозят"),
+                new SpreadPosition(2, "Итог", "решающий голос: если бы Луна выбирала за тебя — куда склоняется ответ")
+            )
+        );
+    }
+
     private static Spread threeCard() {
         return new Spread(
             ReadingType.THREE_CARD,
-            "Прошлое — Настоящее — Будущее",
-            "три карты пути по времени",
+            "Три карты",
+            "прошлое, настоящее и будущее",
             List.of(
                 new SpreadPosition(0, "Прошлое", "корни ситуации: что привело к нынешнему моменту, какая энергия осталась за спиной"),
                 new SpreadPosition(1, "Настоящее", "состояние сейчас: что главное в моменте, на чём стоит остановить внимание"),
@@ -74,8 +89,8 @@ public class SpreadCatalog {
     private static Spread love() {
         return new Spread(
             ReadingType.LOVE,
-            "Любовный треугольник",
-            "пять карт о связи двоих",
+            "О любви",
+            "пять карт о ваших отношениях",
             List.of(
                 new SpreadPosition(0, "Я", "что несёт в эту связь сам спрашивающий: чувства, ожидания, состояние"),
                 new SpreadPosition(1, "Партнёр", "что несёт другой человек: его внутреннее отношение, не маска"),
@@ -89,8 +104,8 @@ public class SpreadCatalog {
     private static Spread celticCross() {
         return new Spread(
             ReadingType.CELTIC_CROSS,
-            "Кельтский крест",
-            "десять карт для глубокого вопроса",
+            "Полный разбор",
+            "десять карт на серьёзный вопрос",
             List.of(
                 new SpreadPosition(0, "Суть", "ядро ситуации, главная её энергия"),
                 new SpreadPosition(1, "Вызов", "то, что пересекает суть — поддержка или сопротивление"),
@@ -109,8 +124,8 @@ public class SpreadCatalog {
     private static Spread yearWheel() {
         return new Spread(
             ReadingType.YEAR_WHEEL,
-            "Колесо года",
-            "двенадцать карт по месяцам вперёд",
+            "На год вперёд",
+            "двенадцать карт по месяцам",
             List.of(
                 new SpreadPosition(0, "Месяц 1", "энергия первого месяца от сегодняшнего дня"),
                 new SpreadPosition(1, "Месяц 2", "энергия второго месяца"),

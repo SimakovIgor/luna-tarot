@@ -7,6 +7,7 @@ import { OrnamentalDivider } from '@/components/OrnamentalDivider/OrnamentalDivi
 import { WhisperText } from '@/components/WhisperText/WhisperText';
 import { GoldButton } from '@/components/GoldButton/GoldButton';
 import { OrbitalLoader } from '@/components/OrbitalLoader/OrbitalLoader';
+import { BackButton } from '@/components/BackButton/BackButton';
 import { CompatibilityBar } from '@/components/CompatibilityBar/CompatibilityBar';
 import { RichText } from '@/components/RichText/RichText';
 import { generateCompatibilityPostcard, sharePostcard } from '@/util/postcard';
@@ -75,7 +76,7 @@ export function CompatibilityPage({ onClose }: CompatibilityPageProps) {
       {stage === 'loading' && <SparkleField count={40} speed={1.8} />}
       <div className={styles.shell}>
         <div className={styles.topbar}>
-          <button type="button" className={styles.back} onClick={onClose}>← Назад</button>
+          <BackButton onClick={onClose} />
           <span className={styles.topTitle}>совместимость</span>
           <span style={{ width: 50 }} />
         </div>

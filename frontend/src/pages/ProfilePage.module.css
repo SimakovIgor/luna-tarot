@@ -8,11 +8,13 @@
 }
 
 .topbar {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
+  gap: 8px;
   padding-top: 18px;
 }
+.topbar > :last-child { justify-self: end; }
 .back {
   font-family: var(--font-display);
   font-size: 10px;
@@ -25,8 +27,8 @@
 .back:hover { color: var(--gold); }
 .topTitle {
   font-family: var(--font-display);
-  font-size: 9.5px;
-  letter-spacing: var(--kicker-tracking, .28em);
+  font-size: 10px;
+  letter-spacing: 0.3em;
   color: var(--gold);
   text-transform: uppercase;
 }
@@ -171,10 +173,16 @@
 /* ── Edit sheet ───────────────────────────────────────────── */
 .backdrop {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: rgba(5, 3, 12, 0.7);
   backdrop-filter: blur(6px);
   z-index: 100;
+  /* iOS WKWebView: форсим compositing layer, чтобы fixed не ехал со скроллом. */
+  -webkit-transform: translate3d(0, 0, 0);
+  transform: translate3d(0, 0, 0);
 }
 .sheet {
   position: fixed;
@@ -189,6 +197,9 @@
   box-shadow: 0 -16px 48px rgba(0, 0, 0, 0.6);
   max-height: 92vh;
   overflow: hidden;
+  /* iOS WKWebView: форсим compositing layer. */
+  -webkit-transform: translate3d(0, 0, 0);
+  transform: translate3d(0, 0, 0);
   display: flex;
   flex-direction: column;
 }
@@ -282,4 +293,166 @@
   justify-content: center;
   gap: 12px;
   margin-top: 4px;
+}
+
+/* ── Гороскоп — переехал из CardOfDayPage. Тот же визуальный язык
+   что и блок «совет луны» в раскладе: рамка + Manrope-body. */
+.horoscopeBlock {
+  margin-top: 6px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .02), rgba(0, 0, 0, .18)), var(--bg-soft);
+}
+.horoscopeHeader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.horoscopeSymbol {
+  font-family: var(--font-display);
+  font-size: 24px;
+  color: var(--gold-warm);
+  text-shadow: 0 0 10px rgba(212, 175, 55, 0.4);
+  line-height: 1;
+}
+.horoscopeName {
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  color: var(--ink);
+  text-transform: uppercase;
+}
+.horoscopeBody {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--ink);
+  text-align: justify;
+  hyphens: auto;
+  white-space: pre-wrap;
+}
+.horoscopeMuted {
+  color: var(--ink-dim);
+  font-style: italic;
+  font-family: var(--font-italic);
+}
+
+/* ── Support card (Telegram Stars донат) ── */
+
+.supportCard {
+  position: relative;
+  width: 100%;
+  margin: 8px 0 0;
+  padding: 16px 18px;
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  border-radius: 16px;
+  background:
+    radial-gradient(120% 80% at 0% 0%, rgba(212, 175, 55, 0.18), transparent 60%),
+    linear-gradient(180deg, #160b25 0%, #08040f 100%);
+  cursor: pointer;
+  text-align: left;
+  color: var(--ink);
+  overflow: hidden;
+  transition: border-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+}
+.supportCard:hover {
+  border-color: var(--gold, #d4af37);
+  transform: translateY(-1px);
+  box-shadow: 0 16px 36px -18px rgba(212, 175, 55, 0.6);
+}
+.supportCard:active { transform: translateY(0); }
+
+.supportCardGlow {
+  position: absolute;
+  inset: -40% -10% auto -10%;
+  height: 140%;
+  background:
+    radial-gradient(60% 50% at 80% 20%, rgba(212, 175, 55, 0.25), transparent 70%);
+  filter: blur(20px);
+  pointer-events: none;
+}
+
+.supportCardContent {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.supportCardHeader {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.supportCardGlyph {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(212, 175, 55, 0.35), rgba(212, 175, 55, 0.08));
+  border: 1px solid rgba(212, 175, 55, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: var(--gold, #d4af37);
+  text-shadow: 0 0 12px rgba(212, 175, 55, 0.6);
+  flex-shrink: 0;
+}
+
+.supportCardTitleBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.supportCardTitle {
+  font-family: var(--font-display, 'Cinzel', serif);
+  font-size: 15px;
+  letter-spacing: 0.08em;
+  color: var(--gold, #d4af37);
+}
+
+.supportCardSub {
+  font-family: var(--font-italic, 'Cormorant Garamond', serif);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--ink-dim, rgba(255, 255, 255, 0.72));
+}
+
+.supportCardTotal {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-top: 1px dashed rgba(212, 175, 55, 0.25);
+  background:
+    linear-gradient(180deg, rgba(212, 175, 55, 0.05), transparent);
+  margin: 0 -18px -16px;
+  padding: 12px 18px 14px;
+}
+
+.supportCardTotalLabel {
+  font-family: var(--font-display, 'Cinzel', serif);
+  font-size: 10px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--ink-dim, rgba(255, 255, 255, 0.6));
+}
+
+.supportCardTotalValue {
+  font-family: var(--font-display, 'Cinzel', serif);
+  font-size: 18px;
+  letter-spacing: 0.05em;
+  color: var(--gold, #d4af37);
+  text-shadow: 0 0 10px rgba(212, 175, 55, 0.4);
+}
+
+.supportCardTotalStar {
+  font-size: 16px;
 }

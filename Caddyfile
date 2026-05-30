@@ -1,0 +1,46 @@
+# Luna Tarot — production reverse proxy
+# Caddy сам выпускает Let's Encrypt сертификат при первом обращении к домену.
+# Просто поднимаешь, Caddy в первый http-запрос видит, что серта нет, идёт в
+# ACME, получает, кладёт в /data. Перезапуск контейнера сохраняет серт.
+
+# Uptime Kuma — отдельный поддомен с auto-HTTPS. Логин/пароль настраиваются
+# в самом Kuma при первом открытии веб-интерфейса.
+{$LUNA_KUMA_DOMAIN} {
+    reverse_proxy kuma:3001
+    encode gzip zstd
+    log {
+        output stdout
+        format console
+    }
+}
+
+{$LUNA_DOMAIN} {
+    # Mini App + REST + actuator → backend (Spring Boot слушает 8080 внутри сети)
+    handle /app/* {
+        reverse_proxy backend:8080
+    }
+    handle /api/* {
+        reverse_proxy backend:8080
+    }
+    handle /actuator/* {
+        reverse_proxy backend:8080
+    }
+    # Admin-панель (опционально, защищена HTTP Basic в самом backend'е)
+    handle /admin/* {
+        reverse_proxy backend:8080
+    }
+
+    # Корень и всё прочее → landing (nginx со статикой)
+    handle {
+        reverse_proxy landing:80
+    }
+
+    # Сжатие — экономит трафик
+    encode gzip zstd
+
+    # Логи в stdout — видно через `docker logs luna-caddy`
+    log {
+        output stdout
+        format console
+    }
+}

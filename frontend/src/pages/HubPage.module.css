@@ -1,11 +1,7 @@
-/* Caption — обычный поток после spacer'а. Никакого absolute, текст не уезжает за экран.
-   Bottom-margin даёт явный воздух до блока ритуалов. */
+/* Caption под картой — название карты + «Читать полностью» либо подсказка-хинт. */
 .dayCaption {
-  position: relative;
-  /* Выше DayCard (50) — чтобы текст «коснись карты» был поверх возможной тени карты. */
-  z-index: 100;
   padding: 0 16px;
-  margin-bottom: 16px;
+  margin: 10px 0 16px;
   text-align: center;
   display: flex;
   flex-direction: column;
@@ -14,61 +10,73 @@
   min-height: 50px;
 }
 
-/* Spacer резервирует место в потоке под fixed DayCard.
-   Карта-fixed располагается на y = env(safe-area-inset-top) + --day-card-top.
-   ScreenContainer тоже добавляет padding-top равный env(safe-area-inset-top) — значит
-   эти отступы сокращаются. Реальный verical offset до карты внутри контейнера = --day-card-top.
-   Каптион должен оказаться чуть ниже низа карты:
-     spacer_h = --day-card-top + card_h - AppHeader_h + gap
-   AppHeader = 80px лого + 4px padding-top ≈ 84px.
-   gap = 16px воздуха между картой и текстом.
-   На дефолтах: 110 + 224 − 84 + 16 = 266px. */
-.cardSpacer {
-  height: calc(var(--day-card-top, 110px) + var(--day-card-height, 224px) - 84px + 16px);
-  flex-shrink: 0;
+/* Блок дневной карты в потоке: ярлык + карта. Никакого position:fixed —
+   карта скроллится со всем содержимым хаба как часть страницы. */
+.dayCardBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.dayCardLabel {
+  font-family: var(--font-display);
+  font-size: 10.5px;
+  letter-spacing: 0.38em;
+  text-transform: uppercase;
+  color: var(--gold);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+  white-space: nowrap;
 }
 
 .dayName {
   font-family: var(--font-display);
-  font-size: var(--text-md, 14px);
+  font-size: 16px;
   letter-spacing: 0.12em;
   color: var(--ink);
   text-transform: uppercase;
 }
 
-.dayWhisper {
-  font-family: var(--font-italic);
-  font-style: italic;
-  font-size: var(--text-sm, 12px);
-  color: var(--ink-dim);
-  line-height: 1.4;
-  max-width: 280px;
-}
-
 .dayHint {
-  font-family: var(--font-italic);
-  font-style: italic;
-  font-size: var(--text-sm, 12px);
-  color: var(--ink-dim);
-  /* Не даём caption съехать в ширину больше колонки */
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--gold-warm);
   max-width: 280px;
   line-height: 1.4;
+  text-shadow: 0 0 8px rgba(201, 161, 74, 0.35);
+  animation: hintFade 2.6s ease-in-out infinite;
+}
+@keyframes hintFade {
+  0%, 100% { opacity: 0.7; }
+  50%      { opacity: 1; }
 }
 
+/* «Читать полностью» — заметная золотая pill-кнопка, чтобы пользователь
+   понимал что можно провалиться в полную трактовку карты. */
 .readMore {
-  margin-top: 2px;
+  margin-top: 8px;
   font-family: var(--font-display);
-  font-size: 9.5px;
-  letter-spacing: .28em;
+  font-size: 11px;
+  letter-spacing: 0.28em;
   text-transform: uppercase;
-  color: var(--gold);
-  background: none;
-  border: none;
+  color: var(--gold-warm);
+  background: linear-gradient(180deg, rgba(201, 161, 74, 0.12), rgba(201, 161, 74, 0));
+  border: 1px solid var(--line-hot, rgba(212, 175, 55, 0.5));
+  border-radius: var(--radius-pill, 999px);
   cursor: pointer;
-  padding: 2px 6px;
-  transition: color .2s ease, transform .2s ease;
+  padding: 8px 18px;
+  transition: color .2s ease, transform .2s ease, background .2s ease, border-color .2s ease;
 }
-.readMore:hover { color: var(--gold-warm); transform: translateX(2px); }
+.readMore:hover {
+  color: var(--gold);
+  background: linear-gradient(180deg, rgba(201, 161, 74, 0.2), rgba(201, 161, 74, 0.05));
+  border-color: var(--gold);
+}
+.readMore:active { transform: scale(0.97); }
 
 .flipBack {
   margin-top: 4px;
@@ -102,24 +110,30 @@
   gap: 8px;
 }
 
+/* Ритуалы — один столбец, плитки во весь ряд (как .diaryRow / совместимость).
+   Раньше было 2x2 — текст мелкий и пользователь не сразу понимал что есть что. */
 .ritualGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 8px;
 }
 
 /* «Выбрать наугад» с хаба убрана — теперь живёт внутри ReadingFlowPage (стадия выбора веера). */
 
-/* ── Дневник: одна строка ──────────────────────────────────── */
+/* ── Совместимость + Дневник: одинаковый стиль с плитками раскладов выше.
+   Тот же градиент с золотым radial-tint, тот же border-radius, тот же padding —
+   чтобы вся колонка читалась как единая линейка, без «выделяющейся» строки. */
 .diaryRow {
   display: grid;
-  grid-template-columns: 36px 1fr 22px;
+  grid-template-columns: 40px 1fr 22px;
   align-items: center;
   gap: 12px;
-  padding: 10px 14px;
+  padding: 12px 14px;
   border: 1px solid var(--line, rgba(212, 175, 55, 0.22));
   border-radius: 14px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(0, 0, 0, 0.18));
+  background:
+    radial-gradient(ellipse at left, rgba(212, 175, 55, 0.06), transparent 60%),
+    linear-gradient(180deg, var(--bg-soft, #0d0a18) 0%, #06030f 100%);
   cursor: pointer;
   width: 100%;
   text-align: left;
@@ -131,11 +145,13 @@
 }
 
 .diaryIcon {
-  width: 30px;
-  height: 30px;
+  width: 40px;
+  height: 40px;
   color: var(--gold-warm);
-  border: 1px solid rgba(201,161,74,.3);
-  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
   padding: 5px;
   box-sizing: border-box;
 }
@@ -149,7 +165,7 @@
 
 .diaryTitle {
   font-family: var(--font-display);
-  font-size: var(--text-md, 14px);
+  font-size: 15px;
   letter-spacing: 0.05em;
   color: var(--ink);
 }
@@ -157,8 +173,27 @@
 .diaryHint {
   font-family: var(--font-italic);
   font-style: italic;
-  font-size: var(--text-sm, 12px);
+  font-size: 13px;
   color: var(--ink-dim);
+}
+
+/* «Поддержать Луну» — тёплый акцент: чуть больше золота в фоне,
+   живая иконка, но в том же ряду что и совместимость/дневник. */
+.supportRow {
+  background:
+    radial-gradient(ellipse at left, rgba(212, 175, 55, 0.13), transparent 70%),
+    linear-gradient(180deg, #120a20 0%, #07040f 100%);
+  border-color: rgba(212, 175, 55, 0.32);
+}
+.supportRow:hover {
+  border-color: var(--gold, #d4af37);
+}
+.supportRow .diaryIcon {
+  color: var(--gold, #d4af37);
+  filter: drop-shadow(0 0 8px rgba(212, 175, 55, 0.35));
+}
+.supportRow .diaryTitle {
+  color: var(--gold, #d4af37);
 }
 
 .diaryArrow {

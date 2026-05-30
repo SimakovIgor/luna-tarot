@@ -27,6 +27,8 @@ interface TelegramWebApp {
   setBackgroundColor?: (color: string) => void;
   /** Открывает любой t.me/... URL внутри Telegram (а не во внешнем браузере). */
   openTelegramLink?: (url: string) => void;
+  /** Открывает Stars-инвойс по slug-у (https://t.me/$invoice/XXXXX). */
+  openInvoice?: (slug: string, callback?: (status: string) => void) => void;
 }
 
 declare global {

@@ -68,8 +68,21 @@ export async function generatePostcard(reading: Reading, positionLabels?: string
 
   drawOrnamentDivider(ctx, W / 2, 370, 260);
 
+  // Вопрос (если есть) — между разделителем и картами. Без него получатель
+  // не понимает контекст: «Скорее нет» в воздухе не значит ничего.
+  // Триммим до ~120 символов, чтобы влезло максимум в 2 строки.
+  let cardsStartY = 440;
+  const question = (reading.question ?? '').trim();
+  if (question) {
+    const qTrim = question.length > 120 ? question.slice(0, 117).trimEnd() + '…' : question;
+    ctx.font = 'italic 32px "Cormorant Garamond", serif';
+    ctx.fillStyle = PALETTE.ink;
+    wrapText(ctx, '«' + qTrim + '»', W / 2, 410, W - 160, 44);
+    cardsStartY = 530;
+  }
+
   // Карты — адаптивный layout
-  const cardSlots = layoutCards(reading.cards.length, 440);
+  const cardSlots = layoutCards(reading.cards.length, cardsStartY);
   const cardImages = await Promise.all(
     reading.cards.map((c) => loadImage(cardImageUrl(c.card) ?? '')),
   );

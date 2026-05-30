@@ -7,6 +7,17 @@ import type { SpreadId } from './catalog';
 export function SpreadIcon({ id }: { id: SpreadId }) {
   const stroke = 'currentColor';
   switch (id) {
+    case 'YES_NO':
+      // Три карты с большим вопросительным знаком сверху — узнаваемо.
+      return (
+        <svg viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.1">
+          <rect x="3"  y="9" width="5" height="10" rx="1" />
+          <rect x="9.5" y="9" width="5" height="10" rx="1" />
+          <rect x="16" y="9" width="5" height="10" rx="1" />
+          <path d="M10.4 5.2c0-1.2 1-2.2 2.2-2.2s2.2 1 2.2 2.2c0 1.3-1.4 1.5-1.4 2.3v0.5" strokeLinecap="round" />
+          <circle cx="13.2" cy="8.7" r="0.5" fill={stroke} stroke="none" />
+        </svg>
+      );
     case 'THREE_CARD':
       return (
         <svg viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.1">

@@ -6,10 +6,10 @@ import { SparkleField } from '@/components/SparkleField/SparkleField';
 import { AppHeader } from '@/components/AppHeader/AppHeader';
 import { OrnamentalDivider } from '@/components/OrnamentalDivider/OrnamentalDivider';
 import { RitualTile } from '@/components/EntryCard/RitualTile';
+import { DayCard } from '@/components/DayCard/DayCard';
 import type { MeResponse } from '@/api/me';
 import { cardImageUrl, type Reading } from '@/api/reading';
 import { formatTodayRu } from '@/util/format';
-import { extractFirstSentence } from '@/util/text';
 import { SPREAD_LIST, type SpreadId } from '@/spreads/catalog';
 import { SpreadIcon } from '@/spreads/SpreadIcon';
 import { ReadingFlowPage } from './ReadingFlowPage';
@@ -17,6 +17,8 @@ import { CardOfDayPage } from './CardOfDayPage';
 import { DiaryPage } from './DiaryPage';
 import { ProfilePage } from './ProfilePage';
 import { CompatibilityPage } from './CompatibilityPage';
+import { SupportSheet } from '@/components/SupportSheet/SupportSheet';
+import { fetchMe } from '@/api/me';
 import styles from './HubPage.module.css';
 
 interface HubPageProps {
@@ -26,6 +28,9 @@ interface HubPageProps {
   cardOfDay: Reading | null;
   dayFlipped: boolean;
   onDayFlip: (v: boolean) => void;
+  /** Гороскоп показывается в Профиле; HubPage только пробрасывает. */
+  horoscope: import('@/api/horoscope').HoroscopeResponse | null;
+  horoscopeError: string | null;
   /** true когда splash ушёл — триггерит fade-in ритуалов и дневника. */
   reveal?: boolean;
   /** Колбэк в App при смене под-экрана: 'hub' = виден главный, 'other' = sub-page. */
@@ -46,11 +51,22 @@ export function HubPage({
   cardOfDay,
   dayFlipped,
   onDayFlip,
+  horoscope,
+  horoscopeError,
   reveal = true,
   onSubViewChange,
 }: HubPageProps) {
-  void onDayFlip; // оставлен в props на будущее (для quick-flip жестов), сейчас не используется
   const [view, setView] = useState<View>({ name: 'hub' });
+  const [supportOpen, setSupportOpen] = useState(false);
+
+  const handleDonated = async () => {
+    try {
+      const fresh = await fetchMe();
+      onMeUpdated(fresh);
+    } catch {
+      // обновим в следующий раз — необязательное действие
+    }
+  };
 
   // Сообщаем App про смену под-экрана — чтобы DayCard скрывалась когда мы не на хабе.
   useEffect(() => {
@@ -67,7 +83,15 @@ export function HubPage({
     return <DiaryPage onClose={() => setView({ name: 'hub' })} />;
   }
   if (view.name === 'profile') {
-    return <ProfilePage me={me} onMeUpdated={onMeUpdated} onClose={() => setView({ name: 'hub' })} />;
+    return (
+      <ProfilePage
+        me={me}
+        onMeUpdated={onMeUpdated}
+        onClose={() => setView({ name: 'hub' })}
+        horoscope={horoscope}
+        horoscopeError={horoscopeError}
+      />
+    );
   }
   if (view.name === 'compatibility') {
     return <CompatibilityPage onClose={() => setView({ name: 'hub' })} />;
@@ -88,11 +112,21 @@ export function HubPage({
         logoSrc="/app/luna-logo.png"
       />
 
-      {/* Карта дня не рендерится тут — она живёт в App (DayCard) глобально,
-          position:fixed. Spacer резервирует под неё место в потоке. */}
-      <div className={styles.cardSpacer} aria-hidden="true" />
+      {/* Карта дня — inline в потоке. Над ней ярлык «Карта дня», ниже название
+          карты + «Читать полностью». Всё скроллится как единый блок, никакого
+          position:fixed (раньше карта ехала со скроллом в Telegram WebView). */}
+      <div className={styles.dayCardBlock}>
+        <div className={styles.dayCardLabel} aria-hidden="true">Карта дня</div>
+        <DayCard
+          cardOfDay={cardOfDay}
+          flipped={dayFlipped}
+          onFlip={onDayFlip}
+          spinning={false}
+          interactive={reveal}
+          inline
+        />
+      </div>
 
-      {/* Caption — в обычном потоке после spacer'а. */}
       <div className={styles.dayCaption}>
         {firstCard ? (
           dayFlipped ? (
@@ -100,19 +134,16 @@ export function HubPage({
               <div className={styles.dayName}>
                 {firstCard.card.nameRu}{reversed ? ' ↓' : ''}
               </div>
-              <div className={styles.dayWhisper}>
-                {extractFirstSentence(firstCard.card.uprightMeaning)}
-              </div>
               <button
                 type="button"
                 className={styles.readMore}
                 onClick={() => setView({ name: 'card-of-day' })}
               >
-                → читать полностью
+                Читать полностью
               </button>
             </>
           ) : (
-            <span className={styles.dayHint}>коснись карты — Луна откроет</span>
+            <span className={styles.dayHint}>коснись, чтобы открыть</span>
           )
         ) : (
           <span className={styles.dayHint}>Луна готовит карту…</span>
@@ -128,7 +159,7 @@ export function HubPage({
           animate={reveal ? { opacity: 1, y: 0 } : { opacity: 0, y: 14 }}
           transition={{ duration: 0.8, delay: 0.1, ease: [0.22, 0.85, 0.3, 1] }}
         >
-          <OrnamentalDivider label="ритуалы" />
+          <OrnamentalDivider label="расклады" />
           <div className={styles.ritualGrid}>
             {SPREAD_LIST.map((s, i) => (
               <motion.div
@@ -192,7 +223,31 @@ export function HubPage({
           </span>
           <span className={styles.diaryArrow} aria-hidden="true">→</span>
         </motion.button>
+
+        <motion.button
+          type="button"
+          className={`${styles.diaryRow} ${styles.supportRow}`}
+          onClick={() => setSupportOpen(true)}
+          initial={{ opacity: 0, y: 14 }}
+          animate={reveal ? { opacity: 1, y: 0 } : { opacity: 0, y: 14 }}
+          transition={{ duration: 0.7, delay: 1.09, ease: [0.22, 0.85, 0.3, 1] }}
+        >
+          <svg className={styles.diaryIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" aria-hidden="true">
+            <path d="M12 3l2.4 5.4L20 9l-4 4 1 6-5-2.8L7 19l1-6-4-4 5.6-.6L12 3z" />
+          </svg>
+          <span className={styles.diaryText}>
+            <span className={styles.diaryTitle}>Поддержать Луну</span>
+            <span className={styles.diaryHint}>звёзды для Зеркала</span>
+          </span>
+          <span className={styles.diaryArrow} aria-hidden="true">→</span>
+        </motion.button>
       </div>
+
+      <SupportSheet
+        open={supportOpen}
+        onClose={() => setSupportOpen(false)}
+        onDonated={handleDonated}
+      />
     </ScreenContainer>
   );
 }

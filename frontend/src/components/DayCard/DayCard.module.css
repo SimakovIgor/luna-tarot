@@ -3,13 +3,26 @@
 .slot {
   position: fixed;
   left: 50%;
-  top: calc(env(safe-area-inset-top, 12px) + var(--day-card-top, 64px));
+  /* safe-area fallback 8px — синхронизирован с .device в tokens.css. Раньше тут
+     было 12px, а .device использует 8px → расхождение на 4px при splash→hub. */
+  top: calc(env(safe-area-inset-top, 8px) + var(--day-card-top, 64px));
   transform: translateX(-50%);
   width: var(--day-card-width, 138px);
   height: var(--day-card-height, 224px);
   /* z-index 110 — выше хедера (100), чтобы клик по нижней половине карты
      не перехватывался day-caption или другими flow-элементами с z:100. */
   z-index: 110;
+  perspective: 1100px;
+  pointer-events: auto;
+}
+
+/* Inline-режим — карта живёт в потоке HubPage. Без position:fixed, без z-index.
+   Скроллится естественно вместе со страницей. */
+.slotInline {
+  position: relative;
+  margin: 0 auto;
+  width: var(--day-card-width, 138px);
+  height: var(--day-card-height, 224px);
   perspective: 1100px;
   pointer-events: auto;
 }
@@ -32,6 +45,19 @@
 @keyframes cardBreath {
   0%, 100% { transform: scale(0.92); opacity: 0.72; }
   50%      { transform: scale(1.06); opacity: 1; }
+}
+
+/* «Зовущий» режим — карта готова к тапу (загружена, не флипнута).
+   Усиленное золотое свечение приглашает пользователя коснуться.
+   Без дребезжания: мягкая пульсация 3s, никаких сдвигов. */
+.slot.inviting .glow,
+.slotInline.inviting .glow {
+  background: radial-gradient(ellipse at center, rgba(212, 175, 55, 0.45), transparent 60%);
+  animation: cardCallout 3s ease-in-out infinite;
+}
+@keyframes cardCallout {
+  0%, 100% { transform: scale(0.95); opacity: 0.85; }
+  50%      { transform: scale(1.15); opacity: 1; }
 }
 
 .cardWrap,

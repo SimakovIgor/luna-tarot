@@ -61,7 +61,7 @@ export function DesignReviewPage() {
         <section className={styles.section}>
           <div className={styles.label}>whisper text</div>
           <WhisperText highlightEm>
-            Здравствуй, <em>Игорь</em>. О чём твоё сердце сегодня?
+            Здравствуй, <em>Алиса</em>. О чём твоё сердце сегодня?
           </WhisperText>
           <WhisperText size="s" tone="faint">прикоснись — и Луна покажет, что выбрала тебе на сегодня</WhisperText>
         </section>

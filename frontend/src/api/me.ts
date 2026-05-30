@@ -18,6 +18,8 @@ export interface MeResponse {
   lifePathNumber: number | null;
   lunarPhase: string | null;
   conversationState: ConversationState;
+  /** Сумма всех Telegram Stars донатов от пользователя. 0 если не донатил. */
+  donatedStars: number;
 }
 
 export function fetchMe(): Promise<MeResponse> {

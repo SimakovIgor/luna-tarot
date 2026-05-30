@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "sync:cards": "rm -rf public/cards && mkdir -p public/cards && cp ../backend/src/main/resources/cards/*.jpg ../backend/src/main/resources/cards/*.webp public/cards/ 2>/dev/null; true",
+    "sync:cards": "rm -rf public/cards && mkdir -p public/cards && cp ../backend/src/main/resources/cards/*.jpg ../backend/src/main/resources/cards/*.webp public/cards/ 2>/dev/null; node -e \"const fs=require('fs'); const list=fs.readdirSync('public/cards').filter(f=>/\\.(webp|jpg)$/.test(f) && !f.includes('original')); fs.writeFileSync('src/cardManifest.json', JSON.stringify(list, null, 2));\"; true",
     "dev": "npm run sync:cards && vite",
     "build": "npm run sync:cards && tsc -b && vite build",
     "build:to-backend": "npm run sync:cards && tsc -b && vite build --outDir ../backend/src/main/resources/static/app --emptyOutDir",
@@ -13,8 +13,10 @@
     "lint": "eslint . --max-warnings 0"
   },
   "dependencies": {
+    "@sentry/react": "^10.55.0",
     "@tanstack/react-query": "^5.62.0",
     "framer-motion": "^11.15.0",
+    "posthog-js": "^1.376.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.28.0"

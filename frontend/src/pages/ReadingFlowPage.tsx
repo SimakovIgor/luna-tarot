@@ -3,13 +3,14 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { ScreenContainer } from '@/components/ScreenContainer/ScreenContainer';
 import { MoonBackground } from '@/components/MoonBackground/MoonBackground';
 import { GoldButton } from '@/components/GoldButton/GoldButton';
-import { TarotCard } from '@/components/TarotCard/TarotCard';
 import { CardBack } from '@/components/TarotCard/CardBack';
 import { OrnamentalDivider } from '@/components/OrnamentalDivider/OrnamentalDivider';
-import { WhisperText } from '@/components/WhisperText/WhisperText';
 import { OrbitalLoader } from '@/components/OrbitalLoader/OrbitalLoader';
+import { WhisperText } from '@/components/WhisperText/WhisperText';
+import { BackButton } from '@/components/BackButton/BackButton';
 import { RichText } from '@/components/RichText/RichText';
 import { cardImageUrl, createReading, type Reading } from '@/api/reading';
+import { track, reportError } from '@/observability';
 import { haptic } from '@/telegram/webapp';
 import { generatePostcard, sharePostcard } from '@/util/postcard';
 import { buildShareText } from '@/util/shareText';
@@ -25,11 +26,8 @@ interface ReadingFlowPageProps {
 
 type Stage =
   | 'question'
-  | 'draw'      // объединённая шафл+веер сцена, одна группа карт
-  | 'loading'
-  | 'ready'     // расклад получен — спросить как раскрыть (по одной / все сразу)
-  | 'reveal'
-  | 'final';
+  | 'draw'      // объединённая шафл+веер+пик сцена; API летит параллельно
+  | 'final';    // финальная раскладка с морфом из веера + auto-reveal
 
 const FAN_CARDS = 22;
 const SHUFFLE_DURATION_MS = 1700;
@@ -43,38 +41,66 @@ export function ReadingFlowPage({ spreadId, onClose }: ReadingFlowPageProps) {
   const [stage, setStage] = useState<Stage>('question');
   const [question, setQuestion] = useState('');
   const [picked, setPicked] = useState<number[]>([]); // позиции карт в веере
+  const [picksReady, setPicksReady] = useState(false); // выбор закончен + кор. пауза
   const [reading, setReading] = useState<Reading | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [revealIndex, setRevealIndex] = useState(0);
-  // Режим раскрытия — выбирается на стадии 'ready'. Для больших раскладов
-  // ручной режим скрыт (10/12 рубашек тапать — мучение), для 3/5 — на выбор.
-  const [autoReveal, setAutoReveal] = useState(false);
 
+  // ── API fetch — параллельно с draw-анимацией для ВСЕХ раскладов ─────
+  // Принцип: пока пользователь смотрит шафл, видит веер и тыкает карты —
+  // бэкенд уже считает. К моменту окончания выбора расклад почти всегда
+  // готов. Экран «Луна слышит» убран полностью, нет визуального разрыва
+  // между ручным выбором карт в веере и финальной раскладкой.
   useEffect(() => {
-    if (stage !== 'loading') return;
+    if (stage !== 'draw') return;
     let alive = true;
     const effectiveQuestion = question.trim() || DEFAULT_QUESTION;
+    track('spread_started', { spread_id: spreadId, has_question: effectiveQuestion !== DEFAULT_QUESTION });
     createReading(spreadId, effectiveQuestion)
       .then((r) => {
         if (!alive) return;
         setReading(r);
         haptic('medium');
-        setStage('ready');
+        // Транзишн в final триггерится эффектом ниже, когда И picksReady, И reading.
       })
       .catch((e) => {
         if (!alive) return;
-        setError(e instanceof Error ? e.message : 'Не удалось получить расклад');
-        setStage('draw');
+        const msg = e instanceof Error ? e.message : 'Не удалось получить расклад';
+        setError(msg);
+        reportError(e, { spread_id: spreadId, phase: 'createReading' });
       });
     return () => { alive = false; };
   }, [stage, question, spreadId]);
+
+  // Переход в final — когда выбор завершён И ответ получен. Если ответ
+  // придёт раньше выбора (типично для глубоких раскладов) — ждём пика.
+  // Если выбор раньше ответа (быстрый YES_NO) — ждём ответ.
+  useEffect(() => {
+    if (stage === 'draw' && picksReady && reading) {
+      setStage('final');
+      track('spread_completed', { spread_id: spreadId });
+    }
+  }, [stage, picksReady, reading, spreadId]);
+
+  // Преlazyload картинок карт — как только reading приходит, фоном тянем все
+  // лицевые картинки. К моменту флипа в FinalLayout они уже в кэше браузера,
+  // никакой «прорисовки с задержкой».
+  useEffect(() => {
+    if (!reading) return;
+    reading.cards.forEach((rc) => {
+      const url = cardImageUrl(rc.card);
+      if (url) {
+        const img = new Image();
+        img.src = url;
+      }
+    });
+  }, [reading]);
 
   return (
     <ScreenContainer>
       <MoonBackground />
       <div className={styles.shell}>
         <div className={styles.topbar}>
-          <button type="button" className={styles.back} onClick={onClose}>← Назад</button>
+          <BackButton onClick={onClose} />
           <span className={styles.stepLabel}>{stageLabel(stage, spread)}</span>
           <span style={{ width: 50 }} />
         </div>
@@ -90,7 +116,7 @@ export function ReadingFlowPage({ spreadId, onClose }: ReadingFlowPageProps) {
               transition={{ duration: 0.5 }}
             >
               <OrnamentalDivider label={spread.displayName.toLowerCase()} />
-              <h1 className={styles.title}>О чём твоё сердце сейчас?</h1>
+              <h1 className={styles.title}>Задай свой вопрос</h1>
               <p className={styles.subtitle}>{spread.longHint}</p>
               <form
                 className={styles.questionArea}
@@ -108,7 +134,7 @@ export function ReadingFlowPage({ spreadId, onClose }: ReadingFlowPageProps) {
               >
                 <textarea
                   className={styles.questionInput}
-                  placeholder='можно "Что мне сейчас важно увидеть?"'
+                  placeholder='Например: "Что мне сейчас важно увидеть?"'
                   value={question}
                   onChange={(e) => { setError(null); setQuestion(e.target.value); }}
                   rows={3}
@@ -128,6 +154,7 @@ export function ReadingFlowPage({ spreadId, onClose }: ReadingFlowPageProps) {
             <DrawStage
               key="draw"
               spread={spread}
+              autoFlow={spreadId === 'YES_NO'}
               picked={picked}
               onPick={(idx) => {
                 if (picked.includes(idx) || picked.length >= spread.cardCount) return;
@@ -135,7 +162,10 @@ export function ReadingFlowPage({ spreadId, onClose }: ReadingFlowPageProps) {
                 const next = [...picked, idx];
                 setPicked(next);
                 if (next.length === spread.cardCount) {
-                  setTimeout(() => setStage('loading'), 500);
+                  // 1950мс: hold 0.35s + полёт 1.2s + ~400мс на видимость
+                  // лоадера. Если API готов — стейдж сменится после паузы,
+                  // иначе лоадер продолжит крутиться до reading.
+                  setTimeout(() => setPicksReady(true), 1950);
                 }
               }}
               onAutoPick={() => {
@@ -155,75 +185,10 @@ export function ReadingFlowPage({ spreadId, onClose }: ReadingFlowPageProps) {
                 const need = spread.cardCount - picked.length;
                 const next = [...picked, ...available.slice(0, need)];
                 setPicked(next);
-                // Длинная пауза, чтобы пользователь увидел, какие именно карты
-                // подсветились в веере, прежде чем уйти в loading.
-                setTimeout(() => setStage('loading'), 1400);
+                // 1850мс — hold + полёт + чуть лоадера.
+                setTimeout(() => setPicksReady(true), 1850);
               }}
               error={error}
-            />
-          )}
-
-          {stage === 'loading' && (
-            <motion.div
-              key="loading"
-              className={styles.center}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.4 }}
-            >
-              <div className={styles.loadingStage}>
-                <OrbitalLoader />
-                <WhisperText size="m" tone="dim">
-                  Луна слышит. Карты идут к свету.
-                </WhisperText>
-              </div>
-            </motion.div>
-          )}
-
-          {stage === 'ready' && reading && (
-            <ReadyStage
-              key="ready"
-              spread={spread}
-              onManual={() => {
-                haptic('light');
-                setAutoReveal(false);
-                setStage('reveal');
-              }}
-              onAuto={() => {
-                haptic('medium');
-                setAutoReveal(true);
-                setStage('final');
-              }}
-            />
-          )}
-
-          {stage === 'reveal' && reading && (
-            <RevealStage
-              key={`reveal-${revealIndex}`}
-              reading={reading}
-              spread={spread}
-              index={revealIndex}
-              onNext={() => {
-                if (revealIndex < reading.cards.length - 1) {
-                  setRevealIndex(revealIndex + 1);
-                  haptic('light');
-                } else {
-                  setStage('final');
-                  haptic('light');
-                }
-              }}
-              onPrev={() => {
-                if (revealIndex > 0) {
-                  setRevealIndex(revealIndex - 1);
-                  haptic('light');
-                }
-              }}
-              onSkipToAll={() => {
-                haptic('medium');
-                setAutoReveal(true);
-                setStage('final');
-              }}
             />
           )}
 
@@ -232,15 +197,13 @@ export function ReadingFlowPage({ spreadId, onClose }: ReadingFlowPageProps) {
               key="final"
               reading={reading}
               spread={spread}
-              autoReveal={autoReveal}
               onClose={onClose}
               onAgain={() => {
                 setStage('question');
                 setQuestion('');
                 setPicked([]);
+                setPicksReady(false);
                 setReading(null);
-                setRevealIndex(0);
-                setAutoReveal(false);
               }}
             />
           )}
@@ -264,7 +227,7 @@ export function ReadingFlowPage({ spreadId, onClose }: ReadingFlowPageProps) {
               haptic('light');
               setStage('draw');
             }}>
-              Дальше
+              {spreadId === 'YES_NO' ? 'Спросить' : 'Дальше'}
             </GoldButton>
           </div>
         )}
@@ -274,80 +237,18 @@ export function ReadingFlowPage({ spreadId, onClose }: ReadingFlowPageProps) {
 }
 
 function stageLabel(stage: Stage, spread: SpreadDescriptor): string {
+  const isAutoFlow = spread.id === 'YES_NO';
   switch (stage) {
-    case 'question': return 'Шаг 1 · вопрос';
-    case 'draw':     return `Шаг 2 · выбери ${spread.cardCount}`;
-    case 'loading':  return 'Луна';
-    case 'ready':    return 'Карты ждут';
-    case 'reveal':   return 'Чтение';
+    case 'question': return 'Шаг 1';
+    case 'draw':     return isAutoFlow ? 'Луна слышит' : 'Шаг 2';
     case 'final':    return 'Совет Луны';
   }
 }
 
-/* ── ReadyStage ──────────────────────────────────────────────
- * Промежуточный экран после loading. Юзер выбирает способ раскрытия:
- *   - «Раскрыть по одной» — медленный ритуал, флип каждой карты вручную
- *   - «Открыть все» — Луна сама показывает все карты разом с анимацией
- * Для больших раскладов (>5 карт) «по одной» скрываем — там это пытка. */
-
-interface ReadyStageProps {
-  spread: SpreadDescriptor;
-  onManual: () => void;
-  onAuto: () => void;
-}
-
-function ReadyStage({ spread, onManual, onAuto }: ReadyStageProps) {
-  const showManual = spread.cardCount <= 5;
-  return (
-    <motion.div
-      key="ready-content"
-      className={styles.center}
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.5 }}
-    >
-      <OrnamentalDivider label="карты ждут" />
-      <h1 className={styles.title}>Колода готова.</h1>
-      <p className={styles.subtitle}>
-        Как ты хочешь, чтобы Луна показала {pluralCardsAccusative(spread.cardCount)}?
-      </p>
-
-      <div className={styles.readyChoice}>
-        <button
-          type="button"
-          className={styles.readyTileAuto}
-          onClick={onAuto}
-        >
-          <span className={styles.readyGlyph} aria-hidden="true">✦</span>
-          <span className={styles.readyTitle}>Открыть все</span>
-          <span className={styles.readyHint}>Луна раскроет карты разом</span>
-        </button>
-
-        {showManual && (
-          <button
-            type="button"
-            className={styles.readyTileManual}
-            onClick={onManual}
-          >
-            <span className={styles.readyGlyph} aria-hidden="true">☽</span>
-            <span className={styles.readyTitle}>По одной</span>
-            <span className={styles.readyHint}>сама касайся каждой карты</span>
-          </button>
-        )}
-      </div>
-    </motion.div>
-  );
-}
-
-function pluralCardsAccusative(n: number): string {
-  const mod10 = n % 10;
-  const mod100 = n % 100;
-  if (mod100 >= 11 && mod100 <= 14) return `${n} карт`;
-  if (mod10 === 1) return `${n} карту`;
-  if (mod10 >= 2 && mod10 <= 4) return `${n} карты`;
-  return `${n} карт`;
-}
+/* ── ReadyStage / RevealStage удалены ─────────────────────────
+ * После loading сразу идём в final с auto-reveal — пользователь видит
+ * stagger-анимацию выкладывания всех карт + итог. Экран «по одной / все
+ * сразу» убран по UX-запросу: лишний клик без ценности. */
 
 /* ── DrawStage ──────────────────────────────────────────────────
  * ОДНА motion.div на карту во всех фазах — никаких remount.
@@ -359,6 +260,10 @@ function pluralCardsAccusative(n: number): string {
 
 interface DrawStageProps {
   spread: SpreadDescriptor;
+  /** Если true — шафл и выбор карт идут автоматически без тапов. Для быстрого
+   *  YES_NO: пользователь задал вопрос → одна кнопка «Спросить» → дальше всё
+   *  происходит само. Для глубоких раскладов = false, ритуал выбора важен. */
+  autoFlow: boolean;
   picked: number[];
   onPick: (idx: number) => void;
   onAutoPick: () => void;
@@ -368,15 +273,43 @@ interface DrawStageProps {
 type DrawPhase = 'idle' | 'shuffling' | 'fan';
 
 const CENTER_START = Math.floor((FAN_CARDS - SHUFFLE_FAN_COUNT) / 2);
+// AutoFlow: всё чуть быстрее, чтобы 4-5 секунд от тапа до текста, не 8-11.
+const AUTO_FLOW_START_DELAY_MS = 250;
+const AUTO_FLOW_PICK_DELAY_MS = 850;
+const SHUFFLE_DURATION_AUTO_MS = 1100;
 
-function DrawStage({ spread, picked, onPick, onAutoPick, error }: DrawStageProps) {
+function DrawStage({ spread, autoFlow, picked, onPick, onAutoPick, error }: DrawStageProps) {
   const [phase, setPhase] = useState<DrawPhase>('idle');
+  const shuffleMs = autoFlow ? SHUFFLE_DURATION_AUTO_MS : SHUFFLE_DURATION_MS;
+
+  // Auto-flow: запускаем шафл сразу после mount (с лёгкой паузой, чтобы экран
+  // спокойно открылся), потом разворачиваем веер. Никаких тапов.
+  useEffect(() => {
+    if (!autoFlow) return;
+    const t1 = setTimeout(() => {
+      haptic('medium');
+      setPhase('shuffling');
+    }, AUTO_FLOW_START_DELAY_MS);
+    const t2 = setTimeout(
+      () => setPhase('fan'),
+      AUTO_FLOW_START_DELAY_MS + shuffleMs,
+    );
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [autoFlow, shuffleMs]);
+
+  // Auto-flow: после раскрытия веера выдёргиваем нужное число карт сами.
+  useEffect(() => {
+    if (!autoFlow || phase !== 'fan' || picked.length >= spread.cardCount) return;
+    const t = setTimeout(() => onAutoPick(), AUTO_FLOW_PICK_DELAY_MS);
+    return () => clearTimeout(t);
+  }, [autoFlow, phase, picked.length, spread.cardCount, onAutoPick]);
 
   const handleTap = () => {
+    if (autoFlow) return;
     if (phase !== 'idle') return;
     haptic('medium');
     setPhase('shuffling');
-    setTimeout(() => setPhase('fan'), SHUFFLE_DURATION_MS);
+    setTimeout(() => setPhase('fan'), shuffleMs);
   };
 
   const cards = useMemo(() => Array.from({ length: FAN_CARDS }, (_, i) => i), []);
@@ -385,6 +318,7 @@ function DrawStage({ spread, picked, onPick, onAutoPick, error }: DrawStageProps
 
   const isFan = phase === 'fan';
   const remaining = spread.cardCount - picked.length;
+  const picksComplete = remaining === 0;
 
   return (
     <motion.div
@@ -394,41 +328,48 @@ function DrawStage({ spread, picked, onPick, onAutoPick, error }: DrawStageProps
       exit={{ opacity: 0 }}
       transition={{ duration: 0.4 }}
     >
-      <OrnamentalDivider label={isFan ? `выбери ${spread.cardCount}` : 'тасовка'} />
+      {/* OrnamentalDivider убран — дублировал stepLabel в топбаре («Шаг 2»)
+          и h1 «Выбери карты», давая визуальную перегрузку.
+          После первого пика гасим title/subtitle/autopick через opacity —
+          из DOM не вынимаем, layout остаётся стабильным. */}
       <motion.h1
         className={styles.title}
         key={isFan ? 'fan-title' : 'idle-title'}
         initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.45 }}
+        animate={{ opacity: picked.length > 0 ? 0 : 1 }}
+        transition={{ duration: 0.35 }}
       >
-        {isFan ? 'Слушай руку.' : 'Прикоснись к колоде.'}
+        {autoFlow ? 'Луна тасует' : isFan ? 'Выбери карты' : 'Нажми на колоду'}
       </motion.h1>
       <motion.p
         className={styles.subtitle}
         key={isFan ? 'fan-sub' : 'idle-sub'}
         initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.45, delay: 0.05 }}
+        animate={{ opacity: picked.length > 0 ? 0 : 1 }}
+        transition={{ duration: 0.35, delay: 0.03 }}
       >
-        {isFan
-          ? remaining > 0
-            ? `тронь ${remaining} ${pluralCards(remaining)} — те, к которым тянется взгляд`
-            : 'Луна слышит…'
-          : 'держи вопрос в сердце — и Луна помнит его за тебя'}
+        {autoFlow
+          ? isFan
+            ? 'Карты ложатся…'
+            : 'Расслабься, ответ уже идёт'
+          : isFan
+            ? remaining > 0
+              ? `Коснись ${remaining} ${pluralCards(remaining)} — тех, к которым тянется взгляд`
+              : 'Луна слышит…'
+            : 'Коснись колоды — Луна перемешает карты'}
       </motion.p>
       {error && <p className={styles.subtitle} style={{ color: '#e87e7e' }}>{error}</p>}
 
       <div
         className={styles.drawArena}
-        role={!isFan ? 'button' : undefined}
-        tabIndex={!isFan ? 0 : -1}
-        onClick={!isFan ? handleTap : undefined}
+        role={!autoFlow && !isFan ? 'button' : undefined}
+        tabIndex={!autoFlow && !isFan ? 0 : -1}
+        onClick={!autoFlow && !isFan ? handleTap : undefined}
         onKeyDown={(e) => {
-          if (isFan) return;
+          if (autoFlow || isFan) return;
           if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleTap(); }
         }}
-        aria-label={isFan ? undefined : 'Перемешать колоду'}
+        aria-label={autoFlow ? 'Луна сама раскладывает карты' : isFan ? undefined : 'Перемешать колоду'}
       >
         <motion.span
           className={styles.drawAura}
@@ -446,27 +387,62 @@ function DrawStage({ spread, picked, onPick, onAutoPick, error }: DrawStageProps
           const fanX = Math.sin(rad) * 220 * 0.3;
           const fanY = -Math.cos(rad) * 12;
           const isPicked = picked.includes(i);
-          const liftY = isPicked ? -55 : 0;
 
           // ── Цель анимации ─────────────────────────────────────
           let animate: Record<string, number | number[]>;
           let transition: Record<string, unknown>;
 
           if (isFan) {
-            animate = {
-              x: fanX,
-              y: fanY + liftY,
-              rotate: fanAngle,
-              scale: 1,
-              opacity: 1,
-            };
-            // Карты разъезжаются с задержкой по позиции: чем дальше от центра — тем позже.
-            const distFromCenter = Math.abs(i - (FAN_CARDS - 1) / 2);
-            transition = {
-              duration: 0.95,
-              delay: distFromCenter * 0.04,
-              ease: [0.22, 0.85, 0.3, 1],
-            };
+            // Когда все выбраны (picksComplete) — picked-карты драматично
+            // взмывают вверх и тают, unpicked — просто исчезают. Это и есть
+            // визуальный «вылет из рукава» перед стейдж-транзишеном на final.
+            // Иначе: picked поднимается на -55 (фидбек выбора), unpicked в фане.
+            if (picksComplete && isPicked) {
+              // Picked-карты улетают по лёгкой дуге наружу: дрейфуют чуть от
+              // центра фана (fanX*1.25), уходят высоко вверх. delay 0.35s даёт
+              // карте «зависнуть» в виде на треть секунды перед стартом отлёта.
+              // Softer easeOut (cubic-bezier .16,1,.3,1) — нет резких ускорений.
+              animate = {
+                x: fanX * 1.25,
+                y: fanY - 360,
+                rotate: fanAngle * 0.85,
+                scale: 0.58,
+                opacity: 0,
+              };
+              transition = {
+                duration: 1.2,
+                delay: 0.35,
+                ease: [0.16, 1, 0.3, 1],
+              };
+            } else if (picksComplete && !isPicked) {
+              // Unpicked-карты тают на месте чуть позже, освобождая центр.
+              animate = {
+                x: fanX,
+                y: fanY,
+                rotate: fanAngle,
+                scale: 0.9,
+                opacity: 0,
+              };
+              transition = { duration: 0.6, delay: 0.2, ease: [0.4, 0, 0.2, 1] };
+            } else {
+              // Подъём выше (-100) + лёгкий scale 1.04 → ощущение «карта
+              // вышла из рукава наружу», не просто «дёрнулась». Spring-feel
+              // через cubic-bezier с долгим хвостом.
+              const liftY = isPicked ? -100 : 0;
+              animate = {
+                x: fanX,
+                y: fanY + liftY,
+                rotate: fanAngle,
+                scale: isPicked ? 1.04 : 1,
+                opacity: 1,
+              };
+              const distFromCenter = Math.abs(i - (FAN_CARDS - 1) / 2);
+              transition = {
+                duration: isPicked ? 0.7 : 0.95,
+                delay: isPicked ? 0 : distFromCenter * 0.04,
+                ease: isPicked ? [0.16, 1, 0.3, 1] : [0.22, 0.85, 0.3, 1],
+              };
+            }
           } else if (phase === 'shuffling' && inCenter) {
             // Стопка вздрагивает: лёгкие keyframes rotate/scale, без разлёта
             const sign = centerIdx % 2 === 0 ? 1 : -1;
@@ -478,7 +454,7 @@ function DrawStage({ spread, picked, onPick, onAutoPick, error }: DrawStageProps
               opacity: 1,
             };
             transition = {
-              duration: SHUFFLE_DURATION_MS / 1000,
+              duration: shuffleMs / 1000,
               times: [0, 0.25, 0.55, 0.8, 1],
               delay: centerIdx * 0.03,
               ease: 'easeInOut',
@@ -503,7 +479,7 @@ function DrawStage({ spread, picked, onPick, onAutoPick, error }: DrawStageProps
               animate={animate}
               transition={transition}
               style={{ zIndex }}
-              onClick={isFan ? () => onPick(i) : undefined}
+              onClick={!autoFlow && isFan ? () => onPick(i) : undefined}
             >
               <CardBack uid={`d-${i}`} />
             </motion.div>
@@ -515,27 +491,53 @@ function DrawStage({ spread, picked, onPick, onAutoPick, error }: DrawStageProps
           animate={{ opacity: isFan ? 0 : 1 }}
           transition={{ duration: 0.4 }}
         >
-          {phase === 'idle' ? '✦ коснись' : phase === 'shuffling' ? '✦ Луна тасует' : ''}
+          {autoFlow
+            ? phase === 'shuffling' ? '✦ Луна тасует' : ''
+            : phase === 'idle' ? '✦ нажми сюда' : phase === 'shuffling' ? '✦ Луна тасует' : ''}
         </motion.span>
+
+        {/* Магический лоадер — появляется на месте веера, когда все карты
+            улетели. Орбитальные кольца + пульсирующий шёпот. Это даёт юзеру
+            ощущение, что Луна что-то делает (а не пустота на 3 секунды).
+            Появляется с задержкой 0.6с (карты сначала улетают), пульсирует
+            до момента стейдж-транзишена на final. */}
+        {picksComplete && (
+          <motion.div
+            className={styles.waitingOverlay}
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            /* Появляется когда картам остаётся ~30% полёта (delay 1.05s
+               = hold 0.35s + 60% от полёта 1.2s). Лоадер вступает плавно
+               пока карты ещё видны но уже улетают. */
+            transition={{ delay: 1.05, duration: 0.7, ease: [0.22, 0.85, 0.3, 1] }}
+            aria-hidden="true"
+          >
+            <OrbitalLoader />
+            <motion.div
+              animate={{ opacity: [0.5, 1, 0.5] }}
+              transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+            >
+              <WhisperText size="m" tone="dim">
+                ✦ Луна раскрывает расклад ✦
+              </WhisperText>
+            </motion.div>
+          </motion.div>
+        )}
       </div>
 
-      <div className={styles.fanPicker} aria-label="Выбранные карты">
-        {spread.positions.map((_, slot) => (
-          <div key={slot} className={`${styles.pickedSlot} ${picked[slot] !== undefined ? styles.filled : ''}`}>
-            {picked[slot] !== undefined ? '✦' : '·'}
-          </div>
-        ))}
-      </div>
-
-      {isFan && remaining > 0 && (
+      {/* Кнопка «Выбрать наугад» — под колодой, перед dots-индикатором.
+          Это явный CTA на «не хочу вручную выбирать» сразу после фана. */}
+      {!autoFlow && isFan && (
         <motion.button
           type="button"
           className={styles.autoPickButton}
           onClick={onAutoPick}
           initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.2 }}
+          animate={{ opacity: picked.length > 0 ? 0 : 1, y: 0 }}
+          transition={{ duration: 0.35, delay: picked.length > 0 ? 0 : 0.2 }}
+          style={{ pointerEvents: picked.length > 0 ? 'none' : 'auto' }}
           aria-label="Выбрать карты наугад"
+          disabled={picked.length > 0}
         >
           <svg className={styles.autoPickIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" aria-hidden="true">
             <rect x="3.5" y="3.5" width="17" height="17" rx="3" />
@@ -548,6 +550,21 @@ function DrawStage({ spread, picked, onPick, onAutoPick, error }: DrawStageProps
           <span className={styles.autoPickText}>Выбрать наугад</span>
         </motion.button>
       )}
+
+      <div
+        className={styles.fanPicker}
+        aria-label="Выбранные карты"
+        style={{
+          opacity: picksComplete ? 0 : 1,
+          transition: 'opacity 0.35s ease',
+        }}
+      >
+        {spread.positions.map((_, slot) => (
+          <div key={slot} className={`${styles.pickedSlot} ${picked[slot] !== undefined ? styles.filled : ''}`}>
+            {picked[slot] !== undefined ? '✦' : '·'}
+          </div>
+        ))}
+      </div>
     </motion.div>
   );
 }
@@ -561,94 +578,23 @@ function pluralCards(n: number): string {
   return 'карт';
 }
 
-/* ── RevealStage ────────────────────────────────────────────── */
-
-interface RevealStageProps {
-  reading: Reading;
-  spread: SpreadDescriptor;
-  index: number;
-  onNext: () => void;
-  onPrev: () => void;
-  onSkipToAll: () => void;
-}
-
-function RevealStage({ reading, spread, index, onNext, onPrev, onSkipToAll }: RevealStageProps) {
-  const card = reading.cards[index];
-  const face = cardImageUrl(card.card);
-  const [flipped, setFlipped] = useState(false);
-
-  // При смене индекса карта вновь рубашкой
-  useEffect(() => { setFlipped(false); }, [index]);
-
-  const positionLabel = spread.positions[index]?.longLabel ?? spread.positions[index]?.label ?? `Карта ${index + 1}`;
-
-  return (
-    <motion.div
-      className={`${styles.center} ${styles.revealStage}`}
-      initial={{ opacity: 0, x: 30 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -30 }}
-      transition={{ duration: 0.55 }}
-    >
-      <div className={styles.revealKicker}>
-        {positionLabel} · {index + 1} из {reading.cards.length}
-      </div>
-      <TarotCard
-        faceSrc={face ?? undefined}
-        faceAlt={card.card.nameRu}
-        reversed={card.reversed}
-        flipped={flipped}
-        onFlip={setFlipped}
-        uid={`reveal-${index}`}
-        size="m"
-      />
-      {flipped ? (
-        <>
-          <div className={styles.revealName}>
-            {card.card.nameRu}{card.reversed ? ' (перевёрнута)' : ''}
-          </div>
-          <div className={styles.revealText}>
-            {card.reversed && card.card.reversedMeaning
-              ? card.card.reversedMeaning
-              : card.card.uprightMeaning}
-          </div>
-        </>
-      ) : (
-        <WhisperText size="m" tone="dim">прикоснись к карте — она ответит</WhisperText>
-      )}
-      <div className={styles.revealNav}>
-        <GoldButton variant="ghost" onClick={onPrev} disabled={index === 0}>← Назад</GoldButton>
-        <GoldButton onClick={onNext} disabled={!flipped}>
-          {index === reading.cards.length - 1 ? 'Совет Луны' : 'Дальше →'}
-        </GoldButton>
-      </div>
-      {index < reading.cards.length - 1 && (
-        <button type="button" className={styles.skipToAll} onClick={onSkipToAll}>
-          ✦ открыть все сразу
-        </button>
-      )}
-    </motion.div>
-  );
-}
-
 /* ── FinalStage ─────────────────────────────────────────────── */
 
 interface FinalStageProps {
   reading: Reading;
   spread: SpreadDescriptor;
-  autoReveal: boolean;
   onClose: () => void;
   onAgain: () => void;
 }
 
-function FinalStage({ reading, spread, autoReveal, onClose, onAgain }: FinalStageProps) {
-  // Карты появляются сразу (со своим stagger), под ними — итог Луны.
-  // Текст итога ждёт пока ляжет последняя карта (~lastFlipMs), чтобы не отвлекать.
+function FinalStage({ reading, spread, onClose, onAgain }: FinalStageProps) {
+  // Карты прилетают из DrawStage через layoutId-морф (~600мс), потом
+  // последовательно флипаются. FIRST_DELAY_MS = время чтобы морф долетел,
+  // STAGGER_MS = пауза между флипами карт в FinalLayout. Текст появляется
+  // после последней карты, +600мс отдыха.
   const STAGGER_MS = 380;
   const FIRST_DELAY_MS = 250;
-  const lastFlipMs = autoReveal
-    ? FIRST_DELAY_MS + reading.cards.length * STAGGER_MS + 600
-    : 400;
+  const lastFlipMs = FIRST_DELAY_MS + reading.cards.length * STAGGER_MS + 600;
 
   return (
     <motion.div
@@ -658,8 +604,8 @@ function FinalStage({ reading, spread, autoReveal, onClose, onAgain }: FinalStag
       exit={{ opacity: 0, y: -16 }}
       transition={{ duration: 0.5 }}
     >
-      <OrnamentalDivider label={autoReveal ? 'Луна раскрывает' : 'твоя раскладка'} />
-      <FinalLayout cards={reading.cards} spread={spread} revealOnMount={autoReveal} />
+      <OrnamentalDivider label="Луна раскрывает" />
+      <FinalLayout cards={reading.cards} spread={spread} revealOnMount={true} />
       <OrnamentalDivider label="итог луны" />
       <motion.div
         className={styles.finalReading}
@@ -679,9 +625,7 @@ function FinalStage({ reading, spread, autoReveal, onClose, onAgain }: FinalStag
           <ShareButton reading={reading} spread={spread} />
           <GoldButton onClick={onAgain}>Новый расклад</GoldButton>
         </div>
-        <button type="button" className={styles.finalBackLink} onClick={onClose}>
-          ← на главную
-        </button>
+        <GoldButton variant="ghost" onClick={onClose}>← На главную</GoldButton>
       </motion.div>
     </motion.div>
   );
@@ -698,6 +642,7 @@ function ShareButton({ reading, spread }: { reading: Reading; spread: SpreadDesc
     setBusy(true);
     setHint(null);
     haptic('light');
+    track('share_clicked', { spread_id: spread.id });
     try {
       const labels = spread.positions.map((p) => p.label);
       const blob = await generatePostcard(reading, labels);
@@ -706,11 +651,13 @@ function ShareButton({ reading, spread }: { reading: Reading; spread: SpreadDesc
         text: buildShareText(spread.id),
         url: BOT_URL,
       });
+      track('share_completed', { spread_id: spread.id, result });
       // 'shared' и 'shared-link' оба означают «открылся share-диалог» — хинт не нужен.
       // 'downloaded' — фолбэк-скачивание; сообщаем пользователю.
       setHint(result === 'downloaded' ? 'открытка скачана' : null);
     } catch (e) {
       setHint(e instanceof Error ? e.message : 'не вышло');
+      reportError(e, { phase: 'share', spread_id: spread.id });
     } finally {
       setBusy(false);
     }
