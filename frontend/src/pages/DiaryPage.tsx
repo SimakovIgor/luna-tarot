@@ -5,7 +5,6 @@ import { OrnamentalDivider } from '@/components/OrnamentalDivider/OrnamentalDivi
 import { WhisperText } from '@/components/WhisperText/WhisperText';
 import { GoldButton } from '@/components/GoldButton/GoldButton';
 import { OutcomeSheet } from '@/components/OutcomeSheet/OutcomeSheet';
-import { OrbitalLoader } from '@/components/OrbitalLoader/OrbitalLoader';
 import { BackButton } from '@/components/BackButton/BackButton';
 import {
   cardImageUrl,
@@ -67,7 +66,6 @@ export function DiaryPage({ onClose }: DiaryPageProps) {
             </div>
           ) : items === null ? (
             <div className={styles.empty}>
-              <OrbitalLoader />
               <WhisperText size="m" tone="dim">собираю твои расклады…</WhisperText>
             </div>
           ) : items.length === 0 ? (

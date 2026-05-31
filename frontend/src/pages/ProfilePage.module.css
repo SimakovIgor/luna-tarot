@@ -20,24 +20,28 @@
   flex-direction: column;
   font-family: "Cormorant Garamond", Georgia, serif;
   font-style: normal;
-  /* Единый стандарт ширины контента — совпадает с HubPage. */
+  /* Единый стандарт ширины и top-отступа — совпадает с HubPage. */
   width: 100%;
   max-width: var(--page-max-width);
   margin: 0 auto;
-  padding: 0 var(--page-padding-x) 24px;
+  padding:
+    calc(env(safe-area-inset-top, 0px) + 18px)
+    var(--page-padding-x)
+    calc(env(safe-area-inset-bottom, 0px) + 24px);
   box-sizing: border-box;
 }
 
 /* ── Top bar ─────────────────────────────────────────────── */
 
 /* Top bar — grid 1fr auto 1fr, симметрично как на главном.
-   backPill слева 38px высоты (как datePill / avatar на HubPage), title по центру. */
+   backPill слева 38px высоты (как datePill / avatar на HubPage), title по центру.
+   Top padding теперь в .shell (равен HubPage), здесь — только bottom-разрыв. */
 .topbar {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 8px;
-  padding: 8px 0 14px;
+  padding: 0 0 22px;
 }
 .topbar > :first-child { justify-self: start; }
 .topbar > :last-child  { justify-self: end; }
