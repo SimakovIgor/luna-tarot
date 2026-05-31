@@ -105,6 +105,7 @@ export function HubPage({
       <CompatibilityPage
         onClose={() => setView({ name: 'hub' })}
         pendingInviteSlug={view.inviteSlug}
+        myName={me.name}
       />
     );
   }

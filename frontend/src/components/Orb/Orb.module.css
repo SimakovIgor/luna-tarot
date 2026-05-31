@@ -1,0 +1,50 @@
+/* Orb — круглый портрет с первой буквой имени.
+   Дизайн compat-flow.jsx → Orb. */
+
+.orb {
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 600;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+/* Золотой — основной (ты-инициатор). С мягким float-анимом. */
+.gold {
+  color: #1a1000;
+  background: radial-gradient(circle at 40% 35%, #c9a85c, #8a6020 70%, #3a2808);
+  border: 1px solid var(--gold-faint);
+  box-shadow: 0 0 26px rgba(217, 184, 120, 0.35);
+  animation: orb-float 5s ease-in-out infinite;
+}
+
+/* Фиолетовый — партнёр (когда он есть в loading/result). */
+.purple {
+  color: #fff;
+  background: radial-gradient(circle at 40% 35%, #8a6cc0, #4a2e80 70%, #1c1040);
+  border: 1px solid var(--gold-faint);
+  box-shadow: 0 0 26px rgba(157, 92, 230, 0.4);
+  animation: orb-float 5s ease-in-out infinite;
+}
+
+/* Пунктирный — «?» партнёра-плейсхолдера (друг ещё не вошёл).
+   Pulse-анимация чтобы привлечь внимание. */
+.dashed {
+  color: var(--gold-dim);
+  background: radial-gradient(circle at 40% 35%, rgba(157, 92, 230, 0.35), rgba(40, 20, 70, 0.5) 70%, rgba(16, 8, 30, 0.6));
+  border: 1.5px dashed var(--gold-faint);
+  animation: orb-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes orb-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+
+@keyframes orb-pulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50%      { opacity: 1;   transform: scale(1.05); }
+}

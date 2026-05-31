@@ -5,6 +5,7 @@ import { OrnamentalDivider } from '@/components/OrnamentalDivider/OrnamentalDivi
 import { GoldButton } from '@/components/GoldButton/GoldButton';
 import { BackButton } from '@/components/BackButton/BackButton';
 import { RichText } from '@/components/RichText/RichText';
+import { Orb } from '@/components/Orb/Orb';
 import { generateCompatibilityPostcard, sharePostcard } from '@/util/postcard';
 import { buildCompatibilityShareText } from '@/util/shareText';
 import { BOT_URL } from '@/config';
@@ -24,20 +25,22 @@ import styles from './CompatibilityPage.module.css';
 
 interface CompatibilityPageProps {
   onClose: () => void;
-  /** Если задан — открываем сразу в режиме invitee для этого slug. */
   pendingInviteSlug?: string | null;
+  /** Имя текущего юзера — для буквы в орбе. */
+  myName?: string;
 }
 
 type Stage =
+  | 'invite'         // главный экран приглашения (два орба + CTA)
   | 'form'           // solo: ввод имени/ДР партнёра
-  | 'invite-create'  // инициатор: жми «Создать ссылку»
-  | 'invite-sent'    // инициатор: ссылка готова — поделиться
-  | 'invitee'        // friend: видит «{Имя} зовёт» + кнопка принять
-  | 'loading'        // общий: «Луна сверяет»
-  | 'result';        // общий: показ результата
+  | 'invite-create'  // лоадер пока бэк генерит ссылку
+  | 'invite-sent'    // ссылка готова, ждём друга
+  | 'invitee'        // friend увидел приглашение
+  | 'loading'        // «Луна сверяет»
+  | 'result';        // общий результат
 
-export function CompatibilityPage({ onClose, pendingInviteSlug }: CompatibilityPageProps) {
-  const [stage, setStage] = useState<Stage>(pendingInviteSlug ? 'invitee' : 'form');
+export function CompatibilityPage({ onClose, pendingInviteSlug, myName }: CompatibilityPageProps) {
+  const [stage, setStage] = useState<Stage>(pendingInviteSlug ? 'invitee' : 'invite');
   const [partnerName, setPartnerName] = useState('');
   const [partnerDate, setPartnerDate] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +49,6 @@ export function CompatibilityPage({ onClose, pendingInviteSlug }: CompatibilityP
   const [inviteInfo, setInviteInfo] = useState<CompatibilityInviteInfo | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
 
-  // Friend-режим: подгружаем инфо о приглашении (имя инициатора, его знак).
   useEffect(() => {
     if (!pendingInviteSlug) return;
     let alive = true;
@@ -55,11 +57,13 @@ export function CompatibilityPage({ onClose, pendingInviteSlug }: CompatibilityP
       .catch((e) => {
         if (alive) {
           setError(e instanceof Error ? e.message : 'Приглашение не найдено');
-          setStage('form');
+          setStage('invite');
         }
       });
     return () => { alive = false; };
   }, [pendingInviteSlug]);
+
+  const myInitial = (myName?.trim()?.[0] ?? '·').toUpperCase();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -84,10 +88,7 @@ export function CompatibilityPage({ onClose, pendingInviteSlug }: CompatibilityP
     }
     setStage('loading');
     try {
-      const res = await calculateCompatibility({
-        partnerName: trimmedName,
-        partnerBirthDate: partnerDate,
-      });
+      const res = await calculateCompatibility({ partnerName: trimmedName, partnerBirthDate: partnerDate });
       setResult(res);
       haptic('medium');
       setStage('result');
@@ -105,7 +106,7 @@ export function CompatibilityPage({ onClose, pendingInviteSlug }: CompatibilityP
     setInvite(null);
     setInviteInfo(null);
     setLinkCopied(false);
-    setStage('form');
+    setStage('invite');
   };
 
   const handleCreateInvite = async () => {
@@ -115,17 +116,22 @@ export function CompatibilityPage({ onClose, pendingInviteSlug }: CompatibilityP
     try {
       const created = await createCompatibilityInvite();
       setInvite(created);
+      // Сразу копируем в буфер для удобства.
+      const nav = navigator as Navigator & { clipboard?: { writeText: (s: string) => Promise<void> } };
+      if (nav.clipboard) {
+        nav.clipboard.writeText(created.shareUrl).catch(() => {});
+      }
       setStage('invite-sent');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'не удалось создать ссылку');
-      setStage('form');
+      setStage('invite');
     }
   };
 
   const handleShareInvite = () => {
     if (!invite) return;
     haptic('medium');
-    const text = 'Пойдём, спросим у Луны? Открой ссылку — Луна посчитает нашу совместимость.';
+    const text = 'Пойдём, спросим у Луны? Открой ссылку — она посчитает нашу совместимость.';
     const nav = navigator as Navigator & {
       share?: (data: { title?: string; text?: string; url?: string }) => Promise<void>;
       clipboard?: { writeText: (s: string) => Promise<void> };
@@ -147,13 +153,8 @@ export function CompatibilityPage({ onClose, pendingInviteSlug }: CompatibilityP
   const handleCopyInvite = async () => {
     if (!invite) return;
     haptic('light');
-    const nav = navigator as Navigator & {
-      clipboard?: { writeText: (s: string) => Promise<void> };
-    };
-    if (!nav.clipboard) {
-      setError('Скопируй ссылку вручную');
-      return;
-    }
+    const nav = navigator as Navigator & { clipboard?: { writeText: (s: string) => Promise<void> } };
+    if (!nav.clipboard) { setError('Скопируй ссылку вручную'); return; }
     try {
       await nav.clipboard.writeText(invite.shareUrl);
       setLinkCopied(true);
@@ -178,16 +179,75 @@ export function CompatibilityPage({ onClose, pendingInviteSlug }: CompatibilityP
     }
   };
 
+  const role: string | null =
+    stage === 'invite' || stage === 'invite-create' || stage === 'invite-sent' || stage === 'form' ? 'Ты' :
+    stage === 'invitee' ? 'Экран друга' :
+    stage === 'result' ? 'Видят оба' :
+    null;
+
+  const inviterLetter = inviteInfo?.initiatorName?.trim()?.[0]?.toUpperCase() ?? '·';
+  const partnerLetterForResult =
+    result?.partnerName?.trim()?.[0]?.toUpperCase() ?? '·';
+
   return (
     <ScreenContainer>
       <div className={styles.shell}>
         <div className={styles.topbar}>
           <BackButton onClick={onClose} />
           <span className={styles.topTitle}>совместимость</span>
-          <span aria-hidden="true" />
+          {role
+            ? <span className={styles.roleBadge}>{role}</span>
+            : <span aria-hidden="true" />}
         </div>
 
         <AnimatePresence mode="wait">
+          {/* ── STEP 1: invite ── */}
+          {stage === 'invite' && (
+            <motion.div
+              key="invite"
+              className={styles.formStage}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.5 }}
+            >
+              <div className={styles.heroText}>
+                <h1 className={styles.heroTitle}>Позвать человека</h1>
+                <p className={styles.heroSubtitle}>
+                  Луна прочитает вас обоих и покажет, что связывает и что разводит.
+                </p>
+              </div>
+
+              <div className={styles.orbsStage}>
+                <div className={styles.orbCol}>
+                  <Orb letter={myInitial} size={96} variant="gold" />
+                  <span className={styles.orbCaption}>Ты</span>
+                </div>
+                <span className={styles.orbSpark}>✦</span>
+                <div className={styles.orbCol}>
+                  <Orb letter="?" size={96} variant="dashed" />
+                  <span className={styles.orbCaptionFaint}>Кто-то близкий</span>
+                </div>
+              </div>
+
+              {error && <p className={styles.error}>{error}</p>}
+
+              <div className={styles.formActions}>
+                <GoldButton full onClick={handleCreateInvite}>
+                  Создать ссылку-приглашение
+                </GoldButton>
+                <button
+                  type="button"
+                  className={styles.inviteLink}
+                  onClick={() => { setError(null); setStage('form'); }}
+                >
+                  Или проверить самой →
+                </button>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ── form: solo — ввод имени/ДР ── */}
           {stage === 'form' && (
             <motion.div
               key="form"
@@ -230,23 +290,21 @@ export function CompatibilityPage({ onClose, pendingInviteSlug }: CompatibilityP
               </form>
 
               <div className={styles.formActions}>
-                <GoldButton
-                  full
-                  onClick={() => handleSubmit(new Event('submit') as unknown as FormEvent)}
-                >
+                <GoldButton full onClick={() => handleSubmit(new Event('submit') as unknown as FormEvent)}>
                   Спросить Луну
                 </GoldButton>
                 <button
                   type="button"
                   className={styles.inviteLink}
-                  onClick={handleCreateInvite}
+                  onClick={() => { setError(null); setStage('invite'); }}
                 >
-                  Или позвать самого человека →
+                  ← позвать человека
                 </button>
               </div>
             </motion.div>
           )}
 
+          {/* ── STEP 2 (lite): invite-create — лоадер ── */}
           {stage === 'invite-create' && (
             <motion.div
               key="invite-create"
@@ -261,6 +319,7 @@ export function CompatibilityPage({ onClose, pendingInviteSlug }: CompatibilityP
             </motion.div>
           )}
 
+          {/* ── STEP 2: invite-sent ── */}
           {stage === 'invite-sent' && invite && (
             <motion.div
               key="invite-sent"
@@ -270,14 +329,35 @@ export function CompatibilityPage({ onClose, pendingInviteSlug }: CompatibilityP
               exit={{ opacity: 0, y: -12 }}
               transition={{ duration: 0.5 }}
             >
-              <OrnamentalDivider label="ссылка готова" />
-              <p className={styles.subtitle}>
-                отправь её другу. Когда он откроет — Луна сверит ваши энергии,
-                а результат увидите оба.
-              </p>
+              <div className={styles.heroText}>
+                <h1 className={styles.heroTitleSm}>Ссылка готова</h1>
+                <p className={styles.heroSubtitle}>
+                  Отправь её близкому. Как только он войдёт — Луна сверит ваши энергии.
+                </p>
+              </div>
 
-              <div className={styles.inviteLinkBox}>
-                <code className={styles.inviteUrl}>{invite.shareUrl}</code>
+              <div className={styles.sentStage}>
+                <div className={styles.sentOrbs}>
+                  <Orb letter={myInitial} size={74} variant="gold" />
+                  <span className={styles.sentDashLine} aria-hidden="true" />
+                  <Orb letter="?" size={74} variant="dashed" />
+                </div>
+
+                <div className={styles.linkBox}>
+                  <span className={styles.linkIcon}>🔗</span>
+                  <div className={styles.linkText}>
+                    <span className={styles.linkLabel}>
+                      {linkCopied ? 'ССЫЛКА СКОПИРОВАНА' : 'ССЫЛКА-ПРИГЛАШЕНИЕ'}
+                    </span>
+                    <span className={styles.linkUrl}>{invite.shareUrl.replace('https://', '')}</span>
+                  </div>
+                  <span className={styles.linkCheck}>✓</span>
+                </div>
+
+                <div className={styles.waitingDot}>
+                  <span className={styles.waitingDotPulse} />
+                  ждём, пока друг откроет ссылку…
+                </div>
               </div>
 
               {error && <p className={styles.error}>{error}</p>}
@@ -291,19 +371,20 @@ export function CompatibilityPage({ onClose, pendingInviteSlug }: CompatibilityP
                   className={styles.inviteLink}
                   onClick={handleCopyInvite}
                 >
-                  {linkCopied ? '✓ ссылка скопирована' : 'Скопировать ссылку'}
+                  {linkCopied ? '✓ скопировано' : 'Скопировать ссылку'}
                 </button>
                 <button
                   type="button"
                   className={styles.inviteSecondary}
-                  onClick={resetForNew}
+                  onClick={() => setStage('invite')}
                 >
-                  ← назад к форме
+                  ← назад
                 </button>
               </div>
             </motion.div>
           )}
 
+          {/* ── STEP 3: invitee ── */}
           {stage === 'invitee' && (
             <motion.div
               key="invitee"
@@ -313,14 +394,20 @@ export function CompatibilityPage({ onClose, pendingInviteSlug }: CompatibilityP
               exit={{ opacity: 0, y: -12 }}
               transition={{ duration: 0.5 }}
             >
-              <OrnamentalDivider label="приглашение" />
               {inviteInfo ? (
                 <>
-                  <p className={styles.subtitle}>
-                    <strong className={styles.inviterName}>{inviteInfo.initiatorName}</strong>
-                    {' '}зовёт тебя в Зеркало. Луна посмотрит, что между вами.
-                  </p>
+                  <div className={styles.inviteeStage}>
+                    <Orb letter={inviterLetter} size={84} variant="gold" />
+                    <h1 className={styles.inviteeTitle}>
+                      {inviteInfo.initiatorName} зовёт тебя<br />в Зеркало
+                    </h1>
+                    <p className={styles.heroSubtitle}>
+                      Узнайте, что между вами. Луна сверит вас двоих — данные возьмёт из твоего профиля.
+                    </p>
+                  </div>
+
                   {error && <p className={styles.error}>{error}</p>}
+
                   <div className={styles.formActions}>
                     <GoldButton full onClick={handleAcceptInvite}>
                       Войти и сравнить
@@ -343,6 +430,7 @@ export function CompatibilityPage({ onClose, pendingInviteSlug }: CompatibilityP
             </motion.div>
           )}
 
+          {/* ── STEP 4: loading ── */}
           {stage === 'loading' && (
             <motion.div
               key="loading"
@@ -352,11 +440,20 @@ export function CompatibilityPage({ onClose, pendingInviteSlug }: CompatibilityP
               exit={{ opacity: 0 }}
               transition={{ duration: 0.4 }}
             >
-              <div className={styles.waitingMoon} />
+              <div className={styles.loadingOrbs}>
+                <Orb letter={myInitial} size={64} variant="gold" />
+                <span className={styles.loadingSpark}>✦</span>
+                <Orb
+                  letter={inviteInfo?.initiatorName?.[0]?.toUpperCase() ?? '?'}
+                  size={64}
+                  variant="purple"
+                />
+              </div>
               <div className={styles.waitingCaption}>Луна сверяет ваши энергии</div>
             </motion.div>
           )}
 
+          {/* ── STEP 5: result ── */}
           {stage === 'result' && result && (
             <motion.div
               key="result"
@@ -366,15 +463,20 @@ export function CompatibilityPage({ onClose, pendingInviteSlug }: CompatibilityP
               exit={{ opacity: 0 }}
               transition={{ duration: 0.6 }}
             >
-              <ZodiacPair
-                myZodiac={result.myZodiac}
-                partnerZodiac={result.partnerZodiac}
-                partnerName={result.partnerName}
-              />
+              <div className={styles.resultHeader}>
+                <Orb letter={myInitial} size={72} variant="gold" />
+                <span className={styles.resultLink} aria-hidden="true" />
+                <Orb letter={partnerLetterForResult} size={72} variant="purple" />
+              </div>
 
               <div className={styles.resonance}>
                 <span className={styles.resonanceValue}>{result.score}%</span>
                 <span className={styles.resonanceLabel}>Резонанс</span>
+                <span className={styles.resonanceSigns}>
+                  {ZODIAC_INFO[result.myZodiac].sign} {ZODIAC_INFO[result.myZodiac].symbol}
+                  {' · '}
+                  {ZODIAC_INFO[result.partnerZodiac].sign} {ZODIAC_INFO[result.partnerZodiac].symbol}
+                </span>
               </div>
 
               <OrnamentalDivider label="что говорит луна" />
@@ -382,8 +484,6 @@ export function CompatibilityPage({ onClose, pendingInviteSlug }: CompatibilityP
                 <RichText source={result.text} />
               </div>
 
-              {/* Единый паттерн действий: широкая «Поделиться» + квадратная ↺
-                  для новой проверки + пилюля «← на главную». */}
               <div className={styles.finalActions}>
                 <div className={styles.finalActionsPrimary}>
                   <CompatShareButton result={result} />
@@ -397,6 +497,7 @@ export function CompatibilityPage({ onClose, pendingInviteSlug }: CompatibilityP
                     ↺
                   </button>
                 </div>
+                <p className={styles.sharedNote}>Этот расклад виден вам обоим</p>
                 <button type="button" className={styles.homeLink} onClick={onClose}>
                   ← на главную
                 </button>
@@ -409,7 +510,7 @@ export function CompatibilityPage({ onClose, pendingInviteSlug }: CompatibilityP
   );
 }
 
-// ── CompatShareButton — единый паттерн с ReadingFlow.ShareButton. ──
+// ── CompatShareButton ─────────────────────────────────────────
 
 function CompatShareButton({ result }: { result: CompatibilityResponse }) {
   const [busy, setBusy] = useState(false);
@@ -425,13 +526,9 @@ function CompatShareButton({ result }: { result: CompatibilityResponse }) {
       const partner = ZODIAC_INFO[result.partnerZodiac];
       const caption = extractFirstSentence(result.text);
       const blob = await generateCompatibilityPostcard({
-        mySign: me.sign,
-        mySymbol: me.symbol,
-        partnerSign: partner.sign,
-        partnerSymbol: partner.symbol,
-        partnerName: result.partnerName,
-        score: result.score,
-        caption,
+        mySign: me.sign, mySymbol: me.symbol,
+        partnerSign: partner.sign, partnerSymbol: partner.symbol,
+        partnerName: result.partnerName, score: result.score, caption,
       });
       const shared = await sharePostcard(blob, {
         title: 'Luna · наша совместимость',
@@ -453,58 +550,6 @@ function CompatShareButton({ result }: { result: CompatibilityResponse }) {
         {busy ? 'Готовлю…' : 'Поделиться'}
       </GoldButton>
       {hint && <div className={styles.shareHint}>{hint}</div>}
-    </div>
-  );
-}
-
-// ── Пара знаков: орбы по новому дизайну (compat-flow.jsx → Orb) ──
-
-interface ZodiacPairProps {
-  myZodiac: CompatibilityResponse['myZodiac'];
-  partnerZodiac: CompatibilityResponse['partnerZodiac'];
-  partnerName: string;
-}
-
-function ZodiacPair({ myZodiac, partnerZodiac, partnerName }: ZodiacPairProps) {
-  const me = ZODIAC_INFO[myZodiac];
-  const partner = ZODIAC_INFO[partnerZodiac];
-  return (
-    <div className={styles.pair}>
-      <motion.div
-        className={styles.orbCol}
-        initial={{ opacity: 0, x: -16, scale: 0.85 }}
-        animate={{ opacity: 1, x: 0, scale: 1 }}
-        transition={{ duration: 0.7, delay: 0.1, ease: [0.22, 0.85, 0.3, 1] }}
-      >
-        <div className={styles.orb}>
-          <span className={styles.orbSymbol}>{me.symbol}</span>
-        </div>
-        <span className={styles.orbLabel}>{me.sign}</span>
-        <span className={styles.orbRole}>ты</span>
-      </motion.div>
-
-      <motion.div
-        className={styles.pairLink}
-        initial={{ opacity: 0, scaleX: 0 }}
-        animate={{ opacity: 1, scaleX: 1 }}
-        transition={{ duration: 0.7, delay: 0.4 }}
-        aria-hidden="true"
-      >
-        <span className={styles.pairLinkSparkle}>✦</span>
-      </motion.div>
-
-      <motion.div
-        className={styles.orbCol}
-        initial={{ opacity: 0, x: 16, scale: 0.85 }}
-        animate={{ opacity: 1, x: 0, scale: 1 }}
-        transition={{ duration: 0.7, delay: 0.1, ease: [0.22, 0.85, 0.3, 1] }}
-      >
-        <div className={`${styles.orb} ${styles.orbPartner}`}>
-          <span className={styles.orbSymbol}>{partner.symbol}</span>
-        </div>
-        <span className={styles.orbLabel}>{partner.sign}</span>
-        <span className={styles.orbRole}>{partnerName}</span>
-      </motion.div>
     </div>
   );
 }
