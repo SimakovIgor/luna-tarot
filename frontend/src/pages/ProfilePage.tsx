@@ -90,6 +90,8 @@ export function ProfilePage({
             ← Назад
           </button>
           <span className={styles.topTitle}>Профиль</span>
+          {/* Пустой spacer чтобы grid 1fr auto 1fr центрировал «Профиль» симметрично. */}
+          <span aria-hidden="true" />
         </div>
 
         {/* Identity */}

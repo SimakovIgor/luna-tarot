@@ -333,15 +333,81 @@
   width: 100%;
 }
 
+/* Главные действия: широкая «Поделиться раскладом» + квадратная ↺ справа. */
 .finalActionsPrimary {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
+  align-items: stretch;
   gap: 10px;
   width: 100%;
 }
+.shareWrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.shareHint {
+  text-align: center;
+  font-size: 11px;
+  color: var(--ink-faint);
+  font-family: var(--font-display);
+}
 
-/* .finalBackLink удалён — теперь GoldButton variant="ghost" в JSX. */
+/* Квадратная кнопка «новый расклад» — иконка ↺, такого же размера
+   что и primary GoldButton по высоте (~54px). */
+.againSquare {
+  flex-shrink: 0;
+  width: 54px;
+  height: 54px;
+  border: 1px solid var(--gold-border, rgba(217, 184, 120, 0.28));
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--gold);
+  font-family: var(--font-display);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease, transform 0.15s ease;
+}
+.againSquare:hover {
+  border-color: var(--gold);
+  color: var(--gold-hi);
+  background: rgba(217, 184, 120, 0.06);
+}
+.againSquare:active { transform: scale(0.96); }
+
+/* «← на главную» — тонкая текстовая ссылка под кнопками, не CTA. */
+.homeLink {
+  background: none;
+  border: 0;
+  padding: 6px 12px;
+  color: var(--ink-faint);
+  font-family: var(--font-display);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+.homeLink:hover { color: var(--gold); }
+
+/* Подписи позиций (ПРОШЛОЕ · НАСТОЯЩЕЕ · БУДУЩЕЕ) под FinalLayout. */
+.positionsRow {
+  display: flex;
+  justify-content: space-around;
+  gap: 8px;
+  padding: 0 8px;
+  margin-top: -4px;
+}
+.positionLabel {
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--gold-dim);
+  text-align: center;
+}
 
 /* Bottom bar */
 .bottom {

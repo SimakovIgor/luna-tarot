@@ -38,34 +38,37 @@
 .topRow > :first-child { justify-self: start; }
 .topRow > :last-child  { justify-self: end; }
 
+/* datePill и avatar — одинаковая высота 38px, лого крупнее. */
 .datePill {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  height: 38px;
   border: 1px solid rgba(217, 184, 120, 0.3);
-  border-radius: 16px;
-  padding: 5px 11px;
+  border-radius: 19px;
+  padding: 0 14px;
+  box-sizing: border-box;
 }
 
 .dateGlyph {
   color: #d9b878;
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1;
 }
 
 .dateText {
   font-family: 'Cormorant Garamond', 'Georgia', serif;
   color: rgba(217, 184, 120, 0.55);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
 .headerLogo {
-  height: 34px;
+  height: 44px;
   width: auto;
   object-fit: contain;
-  filter: drop-shadow(0 0 12px rgba(217, 184, 120, 0.4));
+  filter: drop-shadow(0 0 14px rgba(217, 184, 120, 0.45));
   pointer-events: none;
   user-select: none;
 }

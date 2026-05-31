@@ -594,6 +594,22 @@ function FinalStage({ reading, spread, onClose, onAgain }: FinalStageProps) {
     >
       <OrnamentalDivider label="Луна раскрывает" />
       <FinalLayout cards={reading.cards} spread={spread} revealOnMount={true} />
+
+      {/* Подписи позиций под картами — только для коротких раскладов
+          (3-5 карт). Для Кельтского креста с 10 позициями не помещается. */}
+      {reading.cards.length <= 5 && (
+        <motion.div
+          className={styles.positionsRow}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: lastFlipMs / 1000, duration: 0.5 }}
+        >
+          {spread.positions.map((p, i) => (
+            <span key={i} className={styles.positionLabel}>{p.label}</span>
+          ))}
+        </motion.div>
+      )}
+
       <OrnamentalDivider label="итог луны" />
       <motion.div
         className={styles.finalReading}
@@ -609,11 +625,24 @@ function FinalStage({ reading, spread, onClose, onAgain }: FinalStageProps) {
         animate={{ opacity: 1 }}
         transition={{ delay: (lastFlipMs + 300) / 1000, duration: 0.4 }}
       >
+        {/* Главный CTA — Поделиться (full-width) + маленькая квадратная
+            «↺» рядом для пере-раскладки. Тонкая текстовая ссылка «на главную»
+            ниже — не главное действие, не нужна как кнопка. */}
         <div className={styles.finalActionsPrimary}>
           <ShareButton reading={reading} spread={spread} />
-          <GoldButton onClick={onAgain}>Новый расклад</GoldButton>
+          <button
+            type="button"
+            className={styles.againSquare}
+            onClick={onAgain}
+            aria-label="Новый расклад"
+            title="Новый расклад"
+          >
+            ↺
+          </button>
         </div>
-        <GoldButton variant="ghost" onClick={onClose}>← На главную</GoldButton>
+        <button type="button" className={styles.homeLink} onClick={onClose}>
+          ← на главную
+        </button>
       </motion.div>
     </motion.div>
   );
@@ -652,13 +681,11 @@ function ShareButton({ reading, spread }: { reading: Reading; spread: SpreadDesc
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-      <GoldButton onClick={handleClick} disabled={busy}>
-        {busy ? 'Готовлю…' : 'Поделиться'}
+    <div className={styles.shareWrap}>
+      <GoldButton onClick={handleClick} disabled={busy} full>
+        {busy ? 'Готовлю…' : 'Поделиться раскладом'}
       </GoldButton>
-      {hint && (
-        <div style={{ fontSize: 11, color: 'var(--ink-faint)', fontStyle: 'italic' }}>{hint}</div>
-      )}
+      {hint && <div className={styles.shareHint}>{hint}</div>}
     </div>
   );
 }

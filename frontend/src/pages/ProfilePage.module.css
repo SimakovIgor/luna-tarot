@@ -30,26 +30,34 @@
 
 /* ── Top bar ─────────────────────────────────────────────── */
 
+/* Top bar — grid 1fr auto 1fr, симметрично как на главном.
+   backPill слева 38px высоты (как datePill / avatar на HubPage), title по центру. */
 .topbar {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: 14px;
+  gap: 8px;
   padding: 8px 0 14px;
 }
+.topbar > :first-child { justify-self: start; }
+.topbar > :last-child  { justify-self: end; }
+
 .backPill {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  height: 38px;
   border: 1px solid var(--gold-faint);
   background: rgba(255, 255, 255, .02);
-  border-radius: 20px;
-  padding: 8px 16px;
+  border-radius: 19px;
+  padding: 0 16px;
   color: var(--gold-dim);
   font-family: "Cormorant Garamond", Georgia, serif;
   font-size: 13px;
   letter-spacing: .14em;
   text-transform: uppercase;
   cursor: pointer;
+  box-sizing: border-box;
   transition: border-color .2s ease, color .2s ease;
 }
 .backPill:hover { border-color: var(--gold-base); color: var(--gold-hi); }
