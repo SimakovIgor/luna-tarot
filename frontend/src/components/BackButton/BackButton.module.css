@@ -1,24 +1,25 @@
-/* Единый back-стиль для всех топбаров. Pill с золотой обводкой,
-   чтобы кнопка читалась как полноценный элемент управления, а не серая ссылка. */
+/* Единый back-стиль для всех топбаров (новый дизайн).
+   Pill с золотой обводкой по обновлённым токенам. */
 .back {
   font-family: var(--font-display);
-  font-size: 11px;
-  letter-spacing: 0.22em;
-  color: var(--gold-warm);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  color: var(--gold-dim);
   text-transform: uppercase;
-  background: rgba(201, 161, 74, 0.06);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-pill, 999px);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--gold-faint);
+  border-radius: 20px;
   cursor: pointer;
-  padding: 6px 14px;
-  transition: color 0.25s ease, border-color 0.25s ease, background 0.25s ease;
+  padding: 8px 16px;
+  transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
   white-space: nowrap;
 }
 .back:hover {
-  color: var(--gold);
+  color: var(--gold-hi);
   border-color: var(--gold);
-  background: rgba(201, 161, 74, 0.12);
+  background: rgba(217, 184, 120, 0.06);
 }
 .back:active {
-  transform: scale(0.96);
+  transform: scale(0.97);
 }

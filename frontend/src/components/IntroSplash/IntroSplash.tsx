@@ -1,37 +1,35 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type MutableRefObject } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { SparkleField } from '@/components/SparkleField/SparkleField';
+import { StarField } from '@/components/StarField/StarField';
 import styles from './IntroSplash.module.css';
 
 interface IntroSplashProps {
   onDone?: () => void;
   onSettleCard?: () => void;
   minDurationMs?: number;
+  /**
+   * Общий со StarField на хабе ref скорости звёзд. Splash живёт при calm=0
+   * (быстрый разлёт); сразу перед exit App рампит его до 1, и StarField
+   * остаётся тот же — переход без перемонтажа canvas.
+   */
+  calmRef: MutableRefObject<number>;
 }
 
-const TYPED = 'луна тасует карты';
-
 /**
- * Cinematic intro: bg + кольца от центра + центрированное лого + typewriter.
- * Карта живёт глобально в App (DayCard), splash — только overlay вокруг.
- *
- * Лого и typewriter обёрнуты в anchor-div с CSS translateX(-50%),
- * чтобы framer-motion transform на motion-элементах не ломал центрирование.
+ * Loading-splash в новом языке: золотой полумесяц + PNG-лого + капс-надпись.
+ * Звёздное поле общее с HubPage (StarField живёт под обоими через position:fixed),
+ * splash рисует только центральный оверлей.
  */
-export function IntroSplash({ onDone, onSettleCard, minDurationMs = 2600 }: IntroSplashProps) {
+export function IntroSplash({
+  onDone,
+  onSettleCard,
+  minDurationMs = 2400,
+  calmRef,
+}: IntroSplashProps) {
   const [phase, setPhase] = useState<'in' | 'out'>('in');
-  const [typed, setTyped] = useState('');
 
-  useEffect(() => {
-    let i = 0;
-    const id = window.setInterval(() => {
-      i++;
-      setTyped(TYPED.slice(0, i));
-      if (i >= TYPED.length) window.clearInterval(id);
-    }, 70);
-    return () => window.clearInterval(id);
-  }, []);
-
+  // Карта дня на App-уровне «успокаивается» одновременно со звёздами —
+  // settleAt чуть раньше exit, чтобы спин выровнялся к моменту fade.
   useEffect(() => {
     const settleAt = Math.max(700, minDurationMs - 800);
     const outAt = minDurationMs;
@@ -53,53 +51,32 @@ export function IntroSplash({ onDone, onSettleCard, minDurationMs = 2600 }: Intr
           exit={{ opacity: 0 }}
           transition={{ duration: 0.85, ease: [0.4, 0, 0.2, 1] }}
         >
-          <div className={styles.bg} aria-hidden="true" />
-          <SparkleField count={70} speed={1.4} />
+          {/* Общий звёздный фон. calmRef = 0 → быстрый разлёт. */}
+          <StarField calmRef={calmRef} />
 
-          <div className={styles.ringsAnchor} aria-hidden="true">
-            {[0, 0.45, 0.9].map((delay, i) => (
-              <motion.span
-                key={i}
-                className={styles.ring}
-                initial={{ scale: 0.3, opacity: 0 }}
-                animate={{ scale: 3.2, opacity: [0, 0.45, 0] }}
-                transition={{
-                  duration: 2.6,
-                  delay,
-                  ease: [0.22, 0.85, 0.3, 1],
-                  repeat: 0,
-                }}
-              />
-            ))}
-          </div>
+          <motion.div
+            className={styles.stage}
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.15 }}
+            transition={{
+              duration: 1.0,
+              ease: [0.22, 0.85, 0.3, 1],
+            }}
+          >
+            {/* Золотой полумесяц — inset box-shadow создаёт «серп»,
+                drop-shadow filter добавляет тёплое свечение вокруг. */}
+            <div className={styles.crescent} aria-hidden="true" />
 
-          {/* «Luna» лого. Anchor держит центрирование, motion-элемент только opacity/y. */}
-          <div className={styles.wordmarkAnchor}>
-            <motion.img
+            <img
               src="/app/luna-logo.png"
               alt="Luna"
-              className={styles.wordmarkImg}
+              className={styles.logo}
               draggable={false}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 1.1, delay: 0.25, ease: [0.22, 0.85, 0.3, 1] }}
             />
-          </div>
 
-          {/* Подпись typewriter. Тот же приём: anchor + motion. */}
-          <div className={styles.subtitleAnchor}>
-            <motion.div
-              className={styles.subtitle}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.4, delay: 0.9 }}
-            >
-              <span>{typed}</span>
-              <span className={styles.caret} aria-hidden="true">▌</span>
-            </motion.div>
-          </div>
+            <div className={styles.caption}>Луна тасует карты</div>
+          </motion.div>
         </motion.div>
       )}
     </AnimatePresence>

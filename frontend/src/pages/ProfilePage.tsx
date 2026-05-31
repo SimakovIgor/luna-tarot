@@ -1,16 +1,14 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ScreenContainer } from '@/components/ScreenContainer/ScreenContainer';
-import { MoonBackground } from '@/components/MoonBackground/MoonBackground';
-import { OrnamentalDivider } from '@/components/OrnamentalDivider/OrnamentalDivider';
+import { StarField } from '@/components/StarField/StarField';
 import { GoldButton } from '@/components/GoldButton/GoldButton';
-import { BackButton } from '@/components/BackButton/BackButton';
 import { RichText } from '@/components/RichText/RichText';
 import { type MeResponse, type Gender, updateMe, fetchMe } from '@/api/me';
 import { ZODIAC_INFO } from '@/zodiac';
 import { haptic } from '@/telegram/webapp';
 import { describeLunarPhase } from '@/util/format';
-import { SupportSheet } from '@/components/SupportSheet/SupportSheet';
 import styles from './ProfilePage.module.css';
 
 interface ProfilePageProps {
@@ -20,6 +18,12 @@ interface ProfilePageProps {
   /** Гороскоп показывается в самом низу профиля (перехал с CardOfDay). */
   horoscope: import('@/api/horoscope').HoroscopeResponse | null;
   horoscopeError: string | null;
+  /**
+   * Открыть экран поддержки. Карточка «Свет для Луны» — это вход
+   * на отдельный экран, а не bottom-sheet. Если родитель не передал
+   * колбэк, кнопка отрабатывает haptic и тихо ничего не делает.
+   */
+  onTapSupport?: () => void;
 }
 
 const ZODIAC_RU: Record<string, { sign: string; symbol: string }> = {
@@ -40,7 +44,7 @@ const ZODIAC_RU: Record<string, { sign: string; symbol: string }> = {
 const GENDER_RU: Record<Gender, string> = {
   MALE: 'Мужской',
   FEMALE: 'Женский',
-  UNSPECIFIED: 'Не указан',
+  UNSPECIFIED: '—',
 };
 
 const LIFE_PATH_MEANING: Record<number, string> = {
@@ -58,146 +62,134 @@ const LIFE_PATH_MEANING: Record<number, string> = {
   33: 'мастер любви',
 };
 
-export function ProfilePage({ me, onClose, onMeUpdated, horoscope, horoscopeError }: ProfilePageProps) {
+export function ProfilePage({
+  me,
+  onClose,
+  onMeUpdated,
+  horoscope,
+  horoscopeError,
+  onTapSupport,
+}: ProfilePageProps) {
   const [editing, setEditing] = useState(false);
-  const [supportOpen, setSupportOpen] = useState(false);
+  // На профиле сцена всегда спокойная — звёзды дрейфуют в базовом темпе.
+  const calmRef = useRef(1);
   const initial = (me.name?.trim()?.[0] ?? '·').toUpperCase();
   const zodiacInfo = me.zodiac ? ZODIAC_RU[me.zodiac] : null;
-  const donatedStars = me.donatedStars ?? 0;
-
-  const refetchMe = async () => {
-    try {
-      const fresh = await fetchMe();
-      onMeUpdated(fresh);
-    } catch {
-      // тихий ретрай в следующий заход
-    }
-  };
+  const horoZodiac = me.zodiac && me.zodiac in ZODIAC_INFO
+    ? ZODIAC_INFO[me.zodiac as keyof typeof ZODIAC_INFO]
+    : null;
+  const bornLabel = me.gender === 'FEMALE' ? 'родилась' : 'родился';
 
   return (
     <ScreenContainer>
-      <MoonBackground />
+      <StarField calmRef={calmRef} />
       <div className={styles.shell}>
+        {/* Top bar — кнопка «Назад» pill + капс «Профиль» справа. */}
         <div className={styles.topbar}>
-          <BackButton onClick={onClose} />
-          <span className={styles.topTitle}>профиль</span>
-          <span style={{ width: 50 }} />
+          <button
+            type="button"
+            className={styles.backPill}
+            onClick={() => { haptic('light'); onClose(); }}
+          >
+            ← Назад
+          </button>
+          <span className={styles.topTitle}>Профиль</span>
         </div>
 
-        <div className={styles.heroBlock}>
+        {/* Identity */}
+        <div className={styles.identity}>
           <div className={styles.avatar} aria-hidden="true">
             <span className={styles.avatarInitial}>{initial}</span>
           </div>
           <h1 className={styles.name}>{me.name || 'Без имени'}</h1>
           <p className={styles.subline}>
-            {me.birthDate ? formatBirthDateRu(me.birthDate) : 'дата рождения не указана'}
+            {me.birthDate ? `${bornLabel} ${formatBirthDateRu(me.birthDate)}` : 'дата рождения не указана'}
           </p>
         </div>
 
-        <OrnamentalDivider label="эзо-профиль" />
-
-        <div className={styles.fields}>
-          <Field
-            kicker="Знак"
-            value={zodiacInfo ? `${zodiacInfo.symbol}  ${zodiacInfo.sign}` : '—'}
-            hint="зодиак по дате рождения"
+        {/* Эзо-профиль */}
+        <SectionLabel>Эзо-профиль</SectionLabel>
+        <div className={styles.ezoGrid}>
+          <EzoCell
+            label="Знак"
+            glyph={zodiacInfo?.symbol}
+            value={zodiacInfo?.sign ?? '—'}
+            hint="по дате рождения"
           />
-          <Field
-            kicker="Число судьбы"
+          <EzoCell
+            label="Число судьбы"
             value={me.lifePathNumber ? `${me.lifePathNumber}` : '—'}
-            hint={me.lifePathNumber ? (LIFE_PATH_MEANING[me.lifePathNumber] ?? '') : 'нумерология по ДР'}
+            hint={me.lifePathNumber ? (LIFE_PATH_MEANING[me.lifePathNumber] ?? 'нумерология по ДР') : 'нумерология по ДР'}
           />
-          <Field
-            kicker="Лунная фаза"
-            value={describeLunarPhase(me.lunarPhase)}
-            hint="фаза Луны в момент твоего рождения"
+          <EzoCell
+            label="Лунная фаза"
+            value={lunarPhaseShort(me.lunarPhase)}
+            hint="фаза при рождении"
           />
-          <Field
-            kicker="Пол"
+          <EzoCell
+            label="Пол"
             value={GENDER_RU[me.gender]}
-            hint="нужен только для согласования родов в текстах Луны"
+            hint="для текстов Луны"
           />
         </div>
 
-        <button type="button" className={styles.editCta} onClick={() => { haptic('light'); setEditing(true); }}>
-          ✦ изменить данные
-        </button>
+        <div className={styles.editBtnWrap}>
+          <GoldButton full onClick={() => { haptic('light'); setEditing(true); }}>
+            ✦ Изменить данные
+          </GoldButton>
+        </div>
 
-        <OrnamentalDivider label="свет для луны" />
+        {/* Свет для Луны — открывает отдельный экран через onTapSupport. */}
+        <SectionLabel>Свет для Луны</SectionLabel>
         <button
           type="button"
-          className={styles.supportCard}
-          onClick={() => { haptic('light'); setSupportOpen(true); }}
+          className={styles.supportRow}
+          onClick={() => { haptic('light'); onTapSupport?.(); }}
         >
-          <div className={styles.supportCardGlow} aria-hidden="true" />
-          <div className={styles.supportCardContent}>
-            <div className={styles.supportCardHeader}>
-              <span className={styles.supportCardGlyph} aria-hidden="true">✦</span>
-              <div className={styles.supportCardTitleBlock}>
-                <span className={styles.supportCardTitle}>Поддержать Луну</span>
-                <span className={styles.supportCardSub}>звёзды → свет для Луны</span>
-              </div>
-            </div>
-            {donatedStars > 0 && (
-              <div className={styles.supportCardTotal}>
-                <span className={styles.supportCardTotalLabel}>уже подарила</span>
-                <span className={styles.supportCardTotalValue}>
-                  {donatedStars} <span className={styles.supportCardTotalStar} aria-hidden>★</span>
-                </span>
-              </div>
-            )}
-          </div>
+          <span className={styles.supportGlyph} aria-hidden="true">✦</span>
+          <span className={styles.supportText}>
+            <span className={styles.supportTitle}>Поддержать Луну</span>
+            <span className={styles.supportSub}>звёзды для Луны</span>
+          </span>
+          <span className={styles.supportArrow} aria-hidden="true">→</span>
         </button>
 
-        <OrnamentalDivider label="гороскоп на сегодня" />
-        <div className={styles.horoscopeBlock}>
-          <div className={styles.horoscopeHeader}>
-            {/* Берём знак из me (а не из horoscope) — иначе после смены ДР
-                символ в шапке остаётся старым до завтрашнего гороскопа. */}
-            {me.zodiac && ZODIAC_INFO[me.zodiac as keyof typeof ZODIAC_INFO] && (
-              <>
-                <span className={styles.horoscopeSymbol}>
-                  {ZODIAC_INFO[me.zodiac as keyof typeof ZODIAC_INFO].symbol}
-                </span>
-                <span className={styles.horoscopeName}>
-                  {ZODIAC_INFO[me.zodiac as keyof typeof ZODIAC_INFO].sign}
-                </span>
-              </>
-            )}
-          </div>
-          <div className={styles.horoscopeBody}>
+        {/* Гороскоп */}
+        <SectionLabel>Гороскоп на сегодня</SectionLabel>
+        <div className={styles.horoBlock}>
+          {horoZodiac && (
+            <div className={styles.horoHeader}>
+              <span className={styles.horoSymbol}>{horoZodiac.symbol}</span>
+              <span className={styles.horoName}>{horoZodiac.sign.toUpperCase()}</span>
+            </div>
+          )}
+          <div className={styles.horoBody}>
             {horoscope ? (
               <RichText source={horoscope.text} />
             ) : horoscopeError ? (
-              <span className={styles.horoscopeMuted}>гороскоп не загрузился</span>
+              <span className={styles.horoMuted}>гороскоп не загрузился</span>
             ) : (
-              <span className={styles.horoscopeMuted}>Луна шепчет твой день…</span>
+              <span className={styles.horoMuted}>Луна шепчет твой день…</span>
             )}
           </div>
         </div>
 
-        <OrnamentalDivider label="о Луне" />
-
-        <details className={styles.faq}>
-          <summary>Что такое перевёрнутая карта?</summary>
-          <p>
-            Когда карта выпадает «вверх ногами», её смысл смещается: прямое значение приглушается,
-            проявляется теневая сторона или внутреннее препятствие. Это не «плохо» — это другая грань той же энергии.
-          </p>
-        </details>
-        <details className={styles.faq}>
-          <summary>Как Луна выбирает карту дня?</summary>
-          <p>
-            Карта на день одна и та же для тебя в течение суток. Завтра она сменится. Утром в 08:00 (МСК)
-            Луна напоминает в чате: «вот твоя карта на сегодня».
-          </p>
-        </details>
-        <details className={styles.faq}>
-          <summary>Можно ли удалить расклад?</summary>
-          <p>
-            Пока — нет. Дневник хранит всё, что Луна тебе показывала. Если очень нужно — напиши автору.
-          </p>
-        </details>
+        {/* О Луне */}
+        <SectionLabel>О Луне</SectionLabel>
+        <div className={styles.faqList}>
+          <FaqItem
+            q="Что такое перевёрнутая карта?"
+            a="Когда карта выпадает «вверх ногами», её смысл смещается: прямое значение приглушается, проявляется теневая сторона или внутреннее препятствие. Это не «плохо» — это другая грань той же энергии."
+          />
+          <FaqItem
+            q="Как Луна выбирает карту дня?"
+            a="Карта на день одна и та же для тебя в течение суток. Завтра она сменится. Утром в 08:00 (МСК) Луна напоминает в чате: «вот твоя карта на сегодня»."
+          />
+          <FaqItem
+            q="Можно ли удалить расклад?"
+            a="Пока — нет. Дневник хранит всё, что Луна тебе показывала. Если очень нужно — напиши автору."
+          />
+        </div>
       </div>
 
       <AnimatePresence>
@@ -212,33 +204,74 @@ export function ProfilePage({ me, onClose, onMeUpdated, horoscope, horoscopeErro
           />
         )}
       </AnimatePresence>
-
-      <SupportSheet
-        open={supportOpen}
-        onClose={() => setSupportOpen(false)}
-        onDonated={refetchMe}
-      />
     </ScreenContainer>
   );
 }
 
-interface FieldProps {
-  kicker: string;
-  value: string;
-  hint?: string;
+// ── Label («— Эзо-профиль —») с тонкими рамками по бокам. ────────
+
+interface SectionLabelProps {
+  children: string;
 }
 
-function Field({ kicker, value, hint }: FieldProps) {
+function SectionLabel({ children }: SectionLabelProps) {
   return (
-    <div className={styles.field}>
-      <div className={styles.fieldKicker}>{kicker}</div>
-      <div className={styles.fieldValue}>{value}</div>
-      {hint && <div className={styles.fieldHint}>{hint}</div>}
+    <div className={styles.sectionLabel} aria-hidden="false">
+      <span className={styles.sectionLine} />
+      <span className={styles.sectionLabelText}>{children}</span>
+      <span className={styles.sectionLine} />
     </div>
   );
 }
 
-// ── Edit sheet ───────────────────────────────────────────────────────────
+// ── Эзо-ячейка (2×2 grid) ───────────────────────────────────────
+
+interface EzoCellProps {
+  label: string;
+  glyph?: string;
+  value: string;
+  hint: string;
+}
+
+function EzoCell({ label, glyph, value, hint }: EzoCellProps) {
+  return (
+    <div className={styles.ezoCell}>
+      <div className={styles.ezoLabel}>{label}</div>
+      <div className={styles.ezoValueRow}>
+        {glyph && <span className={styles.ezoGlyph}>{glyph}</span>}
+        <span className={styles.ezoValue}>{value}</span>
+      </div>
+      <div className={styles.ezoHint}>{hint}</div>
+    </div>
+  );
+}
+
+// ── FAQ-аккордеон ───────────────────────────────────────────────
+
+interface FaqItemProps {
+  q: string;
+  a: string;
+}
+
+function FaqItem({ q, a }: FaqItemProps) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className={styles.faqItem}>
+      <button
+        type="button"
+        className={styles.faqHeader}
+        onClick={() => { haptic('light'); setOpen((v) => !v); }}
+        aria-expanded={open}
+      >
+        <span className={styles.faqQ}>{q}</span>
+        <span className={`${styles.faqPlus} ${open ? styles.faqPlusOpen : ''}`} aria-hidden="true">+</span>
+      </button>
+      {open && <div className={styles.faqA}>{a}</div>}
+    </div>
+  );
+}
+
+// ── Edit sheet ──────────────────────────────────────────────────
 
 interface EditSheetProps {
   me: MeResponse;
@@ -249,7 +282,6 @@ interface EditSheetProps {
 function EditSheet({ me, onClose, onSaved }: EditSheetProps) {
   const [name, setName] = useState(me.name || '');
   const [gender, setGender] = useState<Gender>(me.gender);
-  // type="date" даёт ISO yyyy-MM-dd напрямую — никакой ручной парсинг не нужен.
   const [birthDate, setBirthDate] = useState(me.birthDate ?? '');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -278,8 +310,7 @@ function EditSheet({ me, onClose, onSaved }: EditSheetProps) {
     try {
       await updateMe({ name: trimmedName, gender, birthDate });
       // Защита от рассинхрона: вторым запросом перечитываем профиль,
-      // чтобы UI гарантированно показывал актуальный zodiac/lifePath/lunarPhase
-      // даже если бэк-кэш или прокси отдали что-то странное.
+      // чтобы UI гарантированно показывал актуальный zodiac/lifePath/lunarPhase.
       const fresh = await fetchMe();
       haptic('medium');
       onSaved(fresh);
@@ -290,15 +321,17 @@ function EditSheet({ me, onClose, onSaved }: EditSheetProps) {
     }
   };
 
-  return (
+  // Sheet рендерим через React Portal в body, чтобы ScreenContainer
+  // (со своим overflow и max-width) не обрезал и не центрировал шит.
+  const content = (
     <>
       <motion.div
         key="backdrop"
-        className={styles.backdrop}
+        className={styles.sheetBackdrop}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        transition={{ duration: 0.25 }}
+        transition={{ duration: 0.22 }}
         onClick={busy ? undefined : onClose}
         aria-hidden="true"
       />
@@ -310,14 +343,19 @@ function EditSheet({ me, onClose, onSaved }: EditSheetProps) {
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
-        transition={{ duration: 0.35, ease: [0.22, 0.85, 0.3, 1] }}
+        transition={{ duration: 0.34, ease: [0.22, 0.85, 0.3, 1] }}
       >
-        <button type="button" className={styles.sheetHandle} onClick={busy ? undefined : onClose} aria-label="Закрыть" />
+        <button
+          type="button"
+          className={styles.sheetHandle}
+          onClick={busy ? undefined : onClose}
+          aria-label="Закрыть"
+        />
         <div className={styles.sheetBody}>
-          <OrnamentalDivider label="изменить" />
+          <div className={styles.sheetTitle}>Изменить данные</div>
 
           <label className={styles.sheetField}>
-            <span className={styles.fieldKicker}>Имя</span>
+            <span className={styles.sheetFieldLabel}>Имя</span>
             <input
               className={styles.sheetInput}
               value={name}
@@ -328,7 +366,7 @@ function EditSheet({ me, onClose, onSaved }: EditSheetProps) {
           </label>
 
           <label className={styles.sheetField}>
-            <span className={styles.fieldKicker}>Дата рождения</span>
+            <span className={styles.sheetFieldLabel}>Дата рождения</span>
             <input
               type="date"
               className={`${styles.sheetInput} ${styles.dateInput}`}
@@ -341,7 +379,7 @@ function EditSheet({ me, onClose, onSaved }: EditSheetProps) {
           </label>
 
           <div className={styles.sheetField}>
-            <span className={styles.fieldKicker}>Пол</span>
+            <span className={styles.sheetFieldLabel}>Пол</span>
             <div className={styles.genderRow}>
               {(['MALE', 'FEMALE', 'UNSPECIFIED'] as Gender[]).map((g) => (
                 <button
@@ -357,10 +395,12 @@ function EditSheet({ me, onClose, onSaved }: EditSheetProps) {
             </div>
           </div>
 
-          {error && <p className={styles.error}>{error}</p>}
+          {error && <p className={styles.sheetError}>{error}</p>}
 
           <div className={styles.sheetActions}>
-            <GoldButton variant="ghost" onClick={onClose} disabled={busy}>Отмена</GoldButton>
+            <GoldButton variant="ghost" onClick={onClose} disabled={busy}>
+              Отмена
+            </GoldButton>
             <GoldButton onClick={handleSave} disabled={busy}>
               {busy ? 'сохраняю…' : 'Сохранить'}
             </GoldButton>
@@ -369,7 +409,11 @@ function EditSheet({ me, onClose, onSaved }: EditSheetProps) {
       </motion.div>
     </>
   );
+
+  return createPortal(content, document.body);
 }
+
+// ── helpers ─────────────────────────────────────────────────────
 
 const MONTHS = [
   'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
@@ -378,6 +422,18 @@ const MONTHS = [
 
 function formatBirthDateRu(iso: string): string {
   const d = new Date(iso);
-  if (isNaN(d.getTime())) return iso;
-  return `родился ${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+  if (Number.isNaN(d.getTime())) return iso;
+  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+const LUNAR_PHASE_SHORT: Record<string, string> = {
+  NEW:    'Новая',
+  WAXING: 'Растущая',
+  FULL:   'Полная',
+  WANING: 'Убывающая',
+};
+
+function lunarPhaseShort(phase: string | null): string {
+  if (!phase) return describeLunarPhase(phase);
+  return LUNAR_PHASE_SHORT[phase] ?? describeLunarPhase(phase);
 }

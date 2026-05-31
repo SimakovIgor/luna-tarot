@@ -29,7 +29,7 @@ import java.util.List;
 public class DonationService {
 
     /** Допустимые номиналы донатов в Stars (защита от произвольных сумм). */
-    private static final List<Integer> ALLOWED_STAR_AMOUNTS = List.of(20, 50, 150);
+    private static final List<Integer> ALLOWED_STAR_AMOUNTS = List.of(30, 50, 150);
 
     private final TelegramClient telegramClient;
     private final DonationRepository donationRepository;

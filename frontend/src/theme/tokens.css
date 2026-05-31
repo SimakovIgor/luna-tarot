@@ -1,36 +1,54 @@
 /* Дизайн-токены Luna. Все цвета/шрифты/тени — через CSS-переменные. */
 
 :root {
-  /* ── Background / fond ─────────────────────────────────── */
-  --bg-deep:  #08050f;
-  --bg-soft:  #110820;
+  /* ── Background ──────────────────────────────────────────
+     Новый дизайн: глубокий тёмный космос с фиолетовым свечением сверху. */
+  --bg-deep:  #08050f;   /* самый тёмный — низ градиента, периметр */
+  --bg-mid:   #120c28;
+  --bg-glow:  #2a1c52;   /* фиолетовое свечение наверху */
+  --surface:  #0e0a1f;   /* карточки */
+  --surface2: #160f30;
 
-  /* ── Ink (текст) ────────────────────────────────────────── */
-  --ink:       #ede0c4;   /* основной текст — тёплое слоновое */
-  --ink-dim:   #8a7c5e;   /* приглушённый */
-  --ink-faint: #4a3e2a;   /* едва видимый, для caps-меток */
+  /* Совместимость со старыми именованиями (компоненты ещё используют): */
+  --bg-soft:  #120c28;
 
-  /* ── Gold — единственный акцент ─────────────────────────── */
-  --gold:      #c9a14a;
-  --gold-warm: #d9b876;
-  --gold-deep: #8a6a2f;
+  /* ── Ink (текст) — тёплый белый ────────────────────────── */
+  --ink:        #ece6f5;
+  --ink-dim:    rgba(236, 230, 245, 0.55);
+  --ink-faint:  rgba(236, 230, 245, 0.32);
+
+  /* ── Gold ────────────────────────────────────────────────
+     Новый дизайн: тёплое золото, два уровня — обычный и яркий-акцентный. */
+  --gold:        #d9b878;
+  --gold-hi:     #f2dca0;   /* яркое золото — цифры, акценты */
+  --gold-dim:    rgba(217, 184, 120, 0.55);
+  --gold-faint:  rgba(217, 184, 120, 0.30);
+  --gold-border: rgba(217, 184, 120, 0.28);
+
+  /* Совместимость со старыми именованиями: */
+  --gold-warm:  #d9b878;
+  --gold-deep:  #8a6a2f;
 
   /* ── Линии и рамки ──────────────────────────────────────── */
-  --line:     rgba(201,161,74,.18);
-  --line-hot: rgba(201,161,74,.45);
+  --line:     rgba(217, 184, 120, 0.20);
+  --line-hot: rgba(217, 184, 120, 0.45);
 
-  /* ── Типографика ────────────────────────────────────────── */
-  /* Четыре семейства, чёткие роли:
-     mark     → wordmark «Luna» в редких местах (на карте, fallback хедера)
-     display  → ВСЕ UPPERCASE-кикеры/метки (Cinzel — декоративная антиква)
-     heading  → крупные заголовки экранов и имена карт (Cormorant — мистический serif)
-     body     → весь длинный читаемый текст: интерпретации, гороскоп, совместимость (Manrope — sans, очень читаемый)
-     italic   → атмосферный шёпот/подсказки/курсивные фразы (Cormorant italic) */
-  --font-display: "Cinzel", "Times New Roman", serif;
+  /* ── Акцент: фиолетовый ─────────────────────────────────
+     Только для бейджей роли в Совместимости (вторая орб, лейбл «Экран друга»). */
+  --purple:     #9d5ce6;
+  --purple-dim: rgba(157, 92, 230, 0.18);
+
+  /* ── Типографика ────────────────────────────────────────
+     Единый шрифт: Cormorant Garamond (serif). Курсив не используется.
+     Cinzel Decorative — ТОЛЬКО для римских цифр и латинских названий на картах.
+     system-ui — мелкие тех-цифры (счётчики, статус-бар, бейджи). */
+  --font-display: "Cormorant Garamond", "Georgia", serif;
   --font-heading: "Cormorant Garamond", "Georgia", serif;
-  --font-body:    "Manrope", "Inter", system-ui, -apple-system, sans-serif;
+  --font-body:    "Cormorant Garamond", "Georgia", serif;
   --font-italic:  "Cormorant Garamond", "Georgia", serif;
-  --font-mark:    "UnifrakturMaguntia", "Cinzel", serif;
+  --font-deco:    "Cinzel Decorative", "Times New Roman", serif;
+  --font-mono:    system-ui, -apple-system, sans-serif;
+  --font-mark:    "Cormorant Garamond", "Georgia", serif;
 
   /* Три размера для всего интерфейса. Не плодим под каждый случай. */
   --text-xl: 20px;   /* заголовок экрана / большие имена */
@@ -60,9 +78,24 @@
   --day-card-height: 224px;
 
   /* ── Радиусы ────────────────────────────────────────────── */
-  --radius-card:  14px;
+  --radius-card:  16px;   /* карточки, кнопки */
+  --radius-tile:  14px;   /* плитки, мелкие карточки */
   --radius-tarot: 12px;
-  --radius-pill:  999px;
+  --radius-pill:  24px;   /* пилюли (chip, секция-кнопки) */
+  --radius-round: 50%;
+  --radius-row:   999px;  /* устаревшее, оставляем для совместимости */
+
+  /* ── Тени ────────────────────────────────────────────────
+     Из спеки дизайна: primary-кнопка + свечение луны/орба. */
+  --shadow-primary: 0 6px 24px rgba(217, 184, 120, 0.18),
+                    inset 0 1px 0 rgba(242, 220, 160, 0.20);
+  --glow-moon:      0 0 26px rgba(217, 184, 120, 0.30);
+  --glow-moon-big:  0 0 40px rgba(217, 184, 120, 0.50);
+
+  /* ── Радиальный фон приложения ──────────────────────────
+     Используется как background-image для тёмного контекста экрана. */
+  --bg-radial:
+    radial-gradient(ellipse 120% 60% at 50% 0%, #2a1c52 0%, #150e30 38%, #0a0712 100%);
 
   /* ── Motion (длительности и easings) ────────────────────── */
   --t-fast:   .18s;
@@ -95,16 +128,11 @@ html, body {
 body {
   font-family: var(--font-body);
   color: var(--ink);
-  /* Базовый — тёмный, по краям должен быть виньет (как на splash). */
-  background-color: #05030c;
-  /* Два слоя:
-     1) фиолетовое тёплое пятно по центру (как на splash);
-     2) тёмный виньет по периметру — усиливает контраст центр-края.
-     background-attachment: fixed УБРАН — он ломает position:fixed у детей
-     в iOS WKWebView (известный баг). */
-  background-image:
-    radial-gradient(ellipse 75% 55% at 50% 35%, rgba(40, 18, 70, 0.95) 0%, transparent 70%),
-    radial-gradient(circle at 50% 45%, transparent 30%, rgba(0, 0, 0, 0.55) 100%);
+  background-color: var(--bg-deep);
+  /* Радиальный градиент по новому дизайну: фиолетовое свечение вверху,
+     уходящее в глубокий тёмный книзу. background-attachment: fixed УБРАН —
+     ломает position:fixed у детей в iOS WKWebView. */
+  background-image: var(--bg-radial);
   background-repeat: no-repeat;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

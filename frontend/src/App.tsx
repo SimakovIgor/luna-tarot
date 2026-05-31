@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, type MutableRefObject } from 'react';
 import { getInitData, getTgUser, ready as tgReady } from './telegram/webapp';
 import { loginWithTgInit } from './api/auth';
 import { fetchMe, type MeResponse } from './api/me';
@@ -33,6 +33,9 @@ export function App() {
   // Hub-уровневая навигация: на каком sub-экране юзер сейчас. Нужно App,
   // чтобы скрывать DayCard когда юзер ушёл с хаба (Profile/Reading/Diary).
   const [activeSubView, setActiveSubView] = useState<'hub' | 'other'>('hub');
+  // Скорость звёздного фона. 0 = splash (быстрый разлёт), 1 = home (почти покой).
+  // Mutable ref, чтобы StarField менял скорость без перерендера canvas.
+  const calmRef = useRef(0);
 
   useEffect(() => {
     tgReady();
@@ -121,7 +124,19 @@ export function App() {
       )}
       {showSplash && (
         <IntroSplash
-          onSettleCard={() => setCardSpinning(false)}
+          calmRef={calmRef}
+          onSettleCard={() => {
+            setCardSpinning(false);
+            // Параллельно с settle карты — плавный ramp фона 0→1 за 1.2с.
+            // Звёзды успокаиваются к моменту, когда splash exit'нет.
+            const start = performance.now();
+            const ramp = () => {
+              const e = Math.min((performance.now() - start) / 1200, 1);
+              calmRef.current = e;
+              if (e < 1) requestAnimationFrame(ramp);
+            };
+            requestAnimationFrame(ramp);
+          }}
           onDone={() => setSplashGone(true)}
         />
       )}
@@ -133,6 +148,7 @@ export function App() {
         onSubViewChange: setActiveSubView,
         horoscope,
         horoscopeError,
+        calmRef,
       })}
     </>
   );
@@ -149,6 +165,8 @@ interface BodyProps {
   /** Гороскоп тоже живёт на App-level — нужен и на хабе, и на CardOfDay. */
   horoscope: ReturnType<typeof useHoroscope>['horoscope'];
   horoscopeError: ReturnType<typeof useHoroscope>['error'];
+  /** Общий со StarField ref скорости звёзд (0=splash, 1=home). */
+  calmRef: MutableRefObject<number>;
 }
 
 function renderBody(
@@ -179,6 +197,7 @@ function renderBody(
       horoscopeError={body.horoscopeError}
       reveal={body.reveal}
       onSubViewChange={body.onSubViewChange}
+      calmRef={body.calmRef}
     />
   );
 }

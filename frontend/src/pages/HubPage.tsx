@@ -1,24 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type MutableRefObject } from 'react';
 import { motion } from 'framer-motion';
-import { ScreenContainer } from '@/components/ScreenContainer/ScreenContainer';
-import { MoonBackground } from '@/components/MoonBackground/MoonBackground';
-import { SparkleField } from '@/components/SparkleField/SparkleField';
-import { AppHeader } from '@/components/AppHeader/AppHeader';
-import { OrnamentalDivider } from '@/components/OrnamentalDivider/OrnamentalDivider';
-import { RitualTile } from '@/components/EntryCard/RitualTile';
+import { StarField } from '@/components/StarField/StarField';
 import { DayCard } from '@/components/DayCard/DayCard';
-import type { MeResponse } from '@/api/me';
+import { fetchMe, type MeResponse } from '@/api/me';
 import { cardImageUrl, type Reading } from '@/api/reading';
 import { formatTodayRu } from '@/util/format';
 import { SPREAD_LIST, type SpreadId } from '@/spreads/catalog';
-import { SpreadIcon } from '@/spreads/SpreadIcon';
 import { ReadingFlowPage } from './ReadingFlowPage';
 import { CardOfDayPage } from './CardOfDayPage';
 import { DiaryPage } from './DiaryPage';
 import { ProfilePage } from './ProfilePage';
 import { CompatibilityPage } from './CompatibilityPage';
-import { SupportSheet } from '@/components/SupportSheet/SupportSheet';
-import { fetchMe } from '@/api/me';
+import { SupportPage } from './SupportPage';
 import styles from './HubPage.module.css';
 
 interface HubPageProps {
@@ -31,10 +24,12 @@ interface HubPageProps {
   /** Гороскоп показывается в Профиле; HubPage только пробрасывает. */
   horoscope: import('@/api/horoscope').HoroscopeResponse | null;
   horoscopeError: string | null;
-  /** true когда splash ушёл — триггерит fade-in ритуалов и дневника. */
+  /** true когда splash ушёл — триггерит stagger fade-in блоков хаба. */
   reveal?: boolean;
   /** Колбэк в App при смене под-экрана: 'hub' = виден главный, 'other' = sub-page. */
   onSubViewChange?: (view: 'hub' | 'other') => void;
+  /** Общий со StarField ref скорости звёзд (0=splash, 1=home). */
+  calmRef: MutableRefObject<number>;
 }
 
 type View =
@@ -43,7 +38,17 @@ type View =
   | { name: 'card-of-day' }
   | { name: 'diary' }
   | { name: 'profile' }
-  | { name: 'compatibility' };
+  | { name: 'compatibility' }
+  | { name: 'support' };
+
+/** Карта SpreadId → ключ SVG-иконки (раскладка-схема для SpreadIcon). */
+const SPREAD_ICON_BY_ID: Record<SpreadId, IconKind> = {
+  YES_NO: 'yesno',
+  THREE_CARD: 'three',
+  LOVE: 'love',
+  CELTIC_CROSS: 'full',
+  YEAR_WHEEL: 'year',
+};
 
 export function HubPage({
   me,
@@ -55,18 +60,9 @@ export function HubPage({
   horoscopeError,
   reveal = true,
   onSubViewChange,
+  calmRef,
 }: HubPageProps) {
   const [view, setView] = useState<View>({ name: 'hub' });
-  const [supportOpen, setSupportOpen] = useState(false);
-
-  const handleDonated = async () => {
-    try {
-      const fresh = await fetchMe();
-      onMeUpdated(fresh);
-    } catch {
-      // обновим в следующий раз — необязательное действие
-    }
-  };
 
   // Сообщаем App про смену под-экрана — чтобы DayCard скрывалась когда мы не на хабе.
   useEffect(() => {
@@ -90,164 +86,276 @@ export function HubPage({
         onClose={() => setView({ name: 'hub' })}
         horoscope={horoscope}
         horoscopeError={horoscopeError}
+        onTapSupport={() => setView({ name: 'support' })}
       />
     );
   }
   if (view.name === 'compatibility') {
     return <CompatibilityPage onClose={() => setView({ name: 'hub' })} />;
   }
+  if (view.name === 'support') {
+    return (
+      <SupportPage
+        onClose={() => setView({ name: 'hub' })}
+        onDonated={async () => {
+          try {
+            const fresh = await fetchMe();
+            onMeUpdated(fresh);
+          } catch {
+            // тихо игнорируем — обновим в следующий заход
+          }
+        }}
+      />
+    );
+  }
 
   const firstCard = cardOfDay?.cards?.[0];
   const reversed = firstCard?.reversed ?? false;
   void cardImageUrl; // util остался импортированным на случай возврата к локальному рендерингу
 
+  const initial = me.name?.trim().charAt(0).toUpperCase() || '✦';
+
+  // Stagger: каждый блок появляется через 0.07s * index после reveal.
+  const stagger = (i: number) => ({
+    initial: { opacity: 0, y: 16 },
+    animate: reveal ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 },
+    transition: { duration: 0.6, delay: 0.1 + i * 0.07, ease: [0.22, 0.85, 0.3, 1] as const },
+  });
+
   return (
-    <ScreenContainer>
-      <MoonBackground />
-      <SparkleField count={55} />
-      <AppHeader
-        dateLabel={formatTodayRu()}
-        name={me.name}
-        onProfileClick={() => setView({ name: 'profile' })}
-        logoSrc="/app/luna-logo.png"
-      />
+    <div className={styles.root}>
+      {/* Общий звёздный фон. calmRef=1 на хабе → медленный дрейф. */}
+      <StarField calmRef={calmRef} />
 
-      {/* Карта дня — inline в потоке. Над ней ярлык «Карта дня», ниже название
-          карты + «Читать полностью». Всё скроллится как единый блок, никакого
-          position:fixed (раньше карта ехала со скроллом в Telegram WebView). */}
-      <div className={styles.dayCardBlock}>
-        <div className={styles.dayCardLabel} aria-hidden="true">Карта дня</div>
-        <DayCard
-          cardOfDay={cardOfDay}
-          flipped={dayFlipped}
-          onFlip={onDayFlip}
-          spinning={false}
-          interactive={reveal}
-          inline
-        />
-      </div>
+      <div className={styles.content}>
+        {/* Верхняя строка: дата · лого · аватар */}
+        <motion.div className={styles.topRow} {...stagger(0)}>
+          <div className={styles.datePill}>
+            <span className={styles.dateGlyph} aria-hidden="true">✦</span>
+            <span className={styles.dateText}>{formatTodayRu()}</span>
+          </div>
+          <img
+            src="/app/luna-logo.png"
+            alt="Luna"
+            className={styles.headerLogo}
+            draggable={false}
+          />
+          <button
+            type="button"
+            className={styles.avatar}
+            onClick={() => setView({ name: 'profile' })}
+            aria-label="Профиль"
+          >
+            {initial}
+          </button>
+        </motion.div>
 
-      <div className={styles.dayCaption}>
-        {firstCard ? (
-          dayFlipped ? (
-            <>
-              <div className={styles.dayName}>
-                {firstCard.card.nameRu}{reversed ? ' ↓' : ''}
-              </div>
-              <button
-                type="button"
-                className={styles.readMore}
-                onClick={() => setView({ name: 'card-of-day' })}
-              >
-                Читать полностью
-              </button>
-            </>
-          ) : (
-            <span className={styles.dayHint}>коснись, чтобы открыть</span>
-          )
-        ) : (
-          <span className={styles.dayHint}>Луна готовит карту…</span>
-        )}
-      </div>
-
-      {/* Дно: ритуалы + дневник. Появляются после splash через motion-управление
-          (key=reveal ставит triggers — при смене false→true перезапускает animation). */}
-      <div className={styles.bottomStack}>
-        <motion.section
-          className={styles.ritualSection}
-          initial={{ opacity: 0, y: 14 }}
-          animate={reveal ? { opacity: 1, y: 0 } : { opacity: 0, y: 14 }}
-          transition={{ duration: 0.8, delay: 0.1, ease: [0.22, 0.85, 0.3, 1] }}
-        >
-          <OrnamentalDivider label="расклады" />
-          <div className={styles.ritualGrid}>
-            {SPREAD_LIST.map((s, i) => (
-              <motion.div
-                key={s.id}
-                initial={{ opacity: 0, y: 14 }}
-                animate={reveal ? { opacity: 1, y: 0 } : { opacity: 0, y: 14 }}
-                transition={{
-                  duration: 0.7,
-                  delay: 0.35 + i * 0.12,
-                  ease: [0.22, 0.85, 0.3, 1],
-                }}
-              >
-                <RitualTile
-                  icon={<SpreadIcon id={s.id} />}
-                  title={s.displayName}
-                  meta={s.shortHint}
-                  cardCount={s.cardCount}
-                  accent={s.accent}
-                  delayMs={0}
-                  onClick={() => setView({ name: 'reading', spreadId: s.id })}
-                />
-              </motion.div>
-            ))}
+        {/* Карта дня */}
+        <motion.section className={styles.dayBlock} {...stagger(1)}>
+          <SectionLabel>Карта дня</SectionLabel>
+          <div className={styles.dayCardFloat}>
+            <DayCard
+              cardOfDay={cardOfDay}
+              flipped={dayFlipped}
+              onFlip={onDayFlip}
+              spinning={false}
+              interactive={reveal}
+              inline
+            />
+          </div>
+          <div className={styles.dayCaption}>
+            {firstCard ? (
+              dayFlipped ? (
+                <>
+                  <div className={styles.dayName}>
+                    {firstCard.card.nameRu}
+                    {reversed ? ' ↓' : ''}
+                  </div>
+                  <button
+                    type="button"
+                    className={styles.readMore}
+                    onClick={() => setView({ name: 'card-of-day' })}
+                  >
+                    Читать полностью
+                  </button>
+                </>
+              ) : (
+                <span className={styles.dayHint}>коснись, чтобы открыть</span>
+              )
+            ) : (
+              <span className={styles.dayHint}>Луна готовит карту…</span>
+            )}
           </div>
         </motion.section>
 
-        <motion.button
-          type="button"
-          className={styles.diaryRow}
-          onClick={() => setView({ name: 'compatibility' })}
-          initial={{ opacity: 0, y: 14 }}
-          animate={reveal ? { opacity: 1, y: 0 } : { opacity: 0, y: 14 }}
-          transition={{ duration: 0.7, delay: 0.85, ease: [0.22, 0.85, 0.3, 1] }}
-        >
-          <svg className={styles.diaryIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" aria-hidden="true">
-            <circle cx="9" cy="12" r="6" />
-            <circle cx="15" cy="12" r="6" />
-          </svg>
-          <span className={styles.diaryText}>
-            <span className={styles.diaryTitle}>Совместимость</span>
-            <span className={styles.diaryHint}>сравни себя с другим</span>
-          </span>
-          <span className={styles.diaryArrow} aria-hidden="true">→</span>
-        </motion.button>
+        {/* Расклады */}
+        <motion.div className={styles.sectionHead} {...stagger(2)}>
+          <SectionLabel>Расклады</SectionLabel>
+        </motion.div>
+        <div className={styles.rowList}>
+          {SPREAD_LIST.map((s, i) => (
+            <motion.div key={s.id} {...stagger(3 + i)}>
+              <SpreadRow
+                icon={SPREAD_ICON_BY_ID[s.id]}
+                count={String(s.cardCount)}
+                title={s.displayName}
+                sub={s.shortHint}
+                onTap={() => setView({ name: 'reading', spreadId: s.id })}
+              />
+            </motion.div>
+          ))}
+        </div>
 
-        <motion.button
-          type="button"
-          className={styles.diaryRow}
-          onClick={() => setView({ name: 'diary' })}
-          initial={{ opacity: 0, y: 14 }}
-          animate={reveal ? { opacity: 1, y: 0 } : { opacity: 0, y: 14 }}
-          transition={{ duration: 0.7, delay: 0.97, ease: [0.22, 0.85, 0.3, 1] }}
-        >
-          <svg className={styles.diaryIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" aria-hidden="true">
-            <path d="M4 4h12a3 3 0 013 3v13H7a3 3 0 01-3-3V4z" />
-            <path d="M4 17a3 3 0 013-3h12" />
-          </svg>
-          <span className={styles.diaryText}>
-            <span className={styles.diaryTitle}>Дневник</span>
-            <span className={styles.diaryHint}>прошлые расклады</span>
-          </span>
-          <span className={styles.diaryArrow} aria-hidden="true">→</span>
-        </motion.button>
-
-        <motion.button
-          type="button"
-          className={`${styles.diaryRow} ${styles.supportRow}`}
-          onClick={() => setSupportOpen(true)}
-          initial={{ opacity: 0, y: 14 }}
-          animate={reveal ? { opacity: 1, y: 0 } : { opacity: 0, y: 14 }}
-          transition={{ duration: 0.7, delay: 1.09, ease: [0.22, 0.85, 0.3, 1] }}
-        >
-          <svg className={styles.diaryIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" aria-hidden="true">
-            <path d="M12 3l2.4 5.4L20 9l-4 4 1 6-5-2.8L7 19l1-6-4-4 5.6-.6L12 3z" />
-          </svg>
-          <span className={styles.diaryText}>
-            <span className={styles.diaryTitle}>Поддержать Луну</span>
-            <span className={styles.diaryHint}>звёзды для Луны</span>
-          </span>
-          <span className={styles.diaryArrow} aria-hidden="true">→</span>
-        </motion.button>
+        {/* Ещё */}
+        <motion.div className={styles.sectionHead} {...stagger(8)}>
+          <SectionLabel>Ещё</SectionLabel>
+        </motion.div>
+        <div className={styles.rowList}>
+          <motion.div {...stagger(9)}>
+            <SpreadRow
+              icon="compat"
+              title="Совместимость"
+              sub="сравни себя с другим"
+              onTap={() => setView({ name: 'compatibility' })}
+            />
+          </motion.div>
+          <motion.div {...stagger(10)}>
+            <SpreadRow
+              icon="diary"
+              title="Дневник"
+              sub="история твоих раскладов"
+              onTap={() => setView({ name: 'diary' })}
+            />
+          </motion.div>
+          <motion.div {...stagger(11)}>
+            <SpreadRow
+              icon="support"
+              title="Поддержать Луну"
+              sub="звёзды для Зеркала"
+              warm
+              onTap={() => setView({ name: 'support' })}
+            />
+          </motion.div>
+        </div>
       </div>
+    </div>
+  );
+}
 
-      <SupportSheet
-        open={supportOpen}
-        onClose={() => setSupportOpen(false)}
-        onDonated={handleDonated}
-      />
-    </ScreenContainer>
+// ─────────────────────────────────────────────────────────────────────────────
+// Локальные компоненты разметки хаба.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Тонкий золотой UPPERCASE-кикер с боковыми линиями-градиентами. */
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className={styles.label}>
+      <span className={styles.labelRule} />
+      <span className={styles.labelText}>{children}</span>
+      <span className={styles.labelRule} />
+    </div>
+  );
+}
+
+type IconKind = 'yesno' | 'three' | 'love' | 'full' | 'year' | 'compat' | 'diary' | 'support';
+
+interface SpreadRowProps {
+  icon: IconKind;
+  count?: string;
+  title: string;
+  sub: string;
+  /** Тёплая золотая подсветка (для «Поддержать Луну»). */
+  warm?: boolean;
+  onTap: () => void;
+}
+
+function SpreadRow({ icon, count, title, sub, warm, onTap }: SpreadRowProps) {
+  return (
+    <button
+      type="button"
+      onClick={onTap}
+      className={`${styles.row} ${warm ? styles.rowWarm : ''}`}
+    >
+      <span className={styles.rowIcon}>
+        <SpreadIconSvg kind={icon} />
+        {count && <span className={styles.rowBadge}>{count}</span>}
+      </span>
+      <span className={styles.rowText}>
+        <span className={styles.rowTitle}>{title}</span>
+        <span className={styles.rowSub}>{sub}</span>
+      </span>
+      <span className={styles.rowArrow} aria-hidden="true">→</span>
+    </button>
+  );
+}
+
+/** SVG-схемы layout-ов раскладов (по образцу handoff: 34×34, золотой stroke). */
+function SpreadIconSvg({ kind }: { kind: IconKind }) {
+  const stroke = '#d9b878';
+  const card = (x: number, y: number, w = 6, h = 9) => (
+    <rect x={x} y={y} width={w} height={h} rx={1.2} fill="none" stroke={stroke} strokeWidth={1.4} strokeOpacity={0.85} />
+  );
+  return (
+    <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true">
+      {kind === 'yesno' && (
+        <g>
+          {card(8, 12)}
+          {card(15, 9)}
+          {card(22, 12)}
+        </g>
+      )}
+      {kind === 'three' && (
+        <g>
+          {card(6, 12)}
+          {card(14, 12)}
+          {card(22, 12)}
+        </g>
+      )}
+      {kind === 'love' && (
+        <g>
+          {card(13, 5, 8, 5)}
+          {card(5, 14)}
+          {card(14, 14)}
+          {card(23, 14)}
+          {card(13, 24, 8, 5)}
+        </g>
+      )}
+      {kind === 'full' && (
+        <g>
+          {card(14, 4, 6, 6)}
+          {card(5, 12)}
+          {card(14, 12)}
+          {card(23, 12)}
+          {card(14, 23, 6, 6)}
+        </g>
+      )}
+      {kind === 'year' && (
+        <g fill="none" stroke={stroke} strokeWidth={1.4} strokeOpacity={0.85}>
+          <circle cx="17" cy="17" r="11" />
+          <circle cx="17" cy="6" r="1.6" fill={stroke} />
+          <circle cx="28" cy="17" r="1.6" fill={stroke} />
+          <circle cx="17" cy="28" r="1.6" fill={stroke} />
+          <circle cx="6" cy="17" r="1.6" fill={stroke} />
+        </g>
+      )}
+      {kind === 'compat' && (
+        <g fill="none" stroke={stroke} strokeWidth={1.4} strokeOpacity={0.85}>
+          <circle cx="13" cy="17" r="8" />
+          <circle cx="21" cy="17" r="8" />
+        </g>
+      )}
+      {kind === 'diary' && (
+        <g>
+          {card(9, 7, 16, 20)}
+          <line x1="9" y1="13" x2="25" y2="13" stroke={stroke} strokeWidth={1.4} strokeOpacity={0.85} />
+          <line x1="9" y1="19" x2="25" y2="19" stroke={stroke} strokeWidth={1.4} strokeOpacity={0.85} />
+        </g>
+      )}
+      {kind === 'support' && (
+        <g fill="none" stroke={stroke} strokeWidth={1.4} strokeOpacity={0.85}>
+          <path d="M17,6 l3,7 8,0.5 -6,5 2,8 -7,-4 -7,4 2,-8 -6,-5 8,-0.5 z" />
+        </g>
+      )}
+    </svg>
   );
 }

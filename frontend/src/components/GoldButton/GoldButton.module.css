@@ -1,30 +1,38 @@
+/* GoldButton — primary CTA по новому дизайну.
+   primary: золотой градиент-заливка + бордер gold + текст goldHi + shadow.
+   ghost (secondary): прозрачный фон, бордер goldFaint, текст goldDim. */
 .btn {
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  padding: 12px 22px;
+  padding: 15px 20px;
   font-family: var(--font-display);
-  font-size: 11px;
-  letter-spacing: .28em;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: .22em;
   text-transform: uppercase;
-  color: var(--gold-warm);
-  background: linear-gradient(180deg, rgba(201,161,74,.04), rgba(201,161,74,0));
-  border: 1px solid var(--line-hot);
-  border-radius: var(--radius-pill);
+  color: var(--gold-hi);
+  background: linear-gradient(180deg, rgba(217, 184, 120, 0.18), rgba(217, 184, 120, 0.06));
+  border: 1px solid var(--gold);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-primary);
   cursor: pointer;
-  transition: color var(--t-fast) ease, border-color var(--t-fast) ease, transform var(--t-fast) ease, background var(--t-fast) ease;
+  transition:
+    color var(--t-fast) ease,
+    border-color var(--t-fast) ease,
+    transform var(--t-fast) ease,
+    background var(--t-fast) ease,
+    box-shadow var(--t-fast) ease;
   text-decoration: none;
 }
 .btn:hover {
-  color: var(--ink);
-  border-color: var(--gold);
-  background: linear-gradient(180deg, rgba(201,161,74,.12), rgba(201,161,74,.02));
+  background: linear-gradient(180deg, rgba(217, 184, 120, 0.26), rgba(217, 184, 120, 0.10));
 }
-.btn:active { transform: scale(.97); }
+.btn:active { transform: scale(.98); }
 .btn:disabled {
-  opacity: .4;
+  opacity: .45;
   cursor: not-allowed;
   pointer-events: none;
 }
@@ -33,11 +41,15 @@
   width: 100%;
 }
 
+/* Secondary: прозрачный фон, бордер goldFaint, текст goldDim. */
 .ghost {
-  border-color: var(--line);
-  color: var(--ink-dim);
+  background: rgba(255, 255, 255, 0.015);
+  border-color: var(--gold-border);
+  color: var(--gold-dim);
+  box-shadow: none;
 }
 .ghost:hover {
-  color: var(--ink);
-  border-color: var(--line-hot);
+  color: var(--gold-hi);
+  border-color: var(--gold);
+  background: rgba(217, 184, 120, 0.06);
 }

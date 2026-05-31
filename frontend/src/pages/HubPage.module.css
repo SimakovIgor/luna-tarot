@@ -1,209 +1,308 @@
-/* Caption под картой — название карты + «Читать полностью» либо подсказка-хинт. */
-.dayCaption {
-  padding: 0 16px;
-  margin: 10px 0 16px;
+/* HubPage — главный экран нового дизайна.
+   Звёздный фон под всем (StarField position:fixed), контент скроллится поверх. */
+
+.root {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  height: 100vh;
+  height: 100dvh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* В дизайн-handoff фон чёрный, поверх летят звёзды. StarField сам красит — */
+  /* здесь только safety-fallback для первого кадра. */
+  background: #06030f;
+}
+
+/* Контент-колонка, padding 18px по краям. */
+.content {
+  position: relative;
+  z-index: 2;
+  max-width: 390px;
+  margin: 0 auto;
+  padding: calc(env(safe-area-inset-top, 0px) + 18px) 18px calc(env(safe-area-inset-bottom, 0px) + 30px);
+}
+
+/* ── Верхняя строка: дата · лого · аватар ─────────────────────── */
+.topRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 22px;
+}
+
+.datePill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(217, 184, 120, 0.3);
+  border-radius: 16px;
+  padding: 5px 11px;
+}
+
+.dateGlyph {
+  color: #d9b878;
+  font-size: 9px;
+  line-height: 1;
+}
+
+.dateText {
+  font-family: 'Cormorant Garamond', 'Georgia', serif;
+  color: rgba(217, 184, 120, 0.55);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.headerLogo {
+  height: 34px;
+  width: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 0 12px rgba(217, 184, 120, 0.4));
+  pointer-events: none;
+  user-select: none;
+}
+
+.avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid #d9b878;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #f2dca0;
+  font-family: 'Cormorant Garamond', 'Georgia', serif;
+  font-size: 18px;
+  font-weight: 600;
+  background: rgba(217, 184, 120, 0.08);
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.avatar:hover {
+  background: rgba(217, 184, 120, 0.14);
+}
+
+.avatar:active {
+  transform: scale(0.96);
+}
+
+/* ── Блок «Карта дня» ───────────────────────────────────────── */
+.dayBlock {
   text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  min-height: 50px;
+  gap: 14px;
 }
 
-/* Блок дневной карты в потоке: ярлык + карта. Никакого position:fixed —
-   карта скроллится со всем содержимым хаба как часть страницы. */
-.dayCardBlock {
+/* Лёгкий float карты — 6с цикл, ±5px. */
+.dayCardFloat {
+  display: inline-block;
+  animation: lu-float 6s ease-in-out infinite;
+}
+
+@keyframes lu-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-5px); }
+}
+
+/* Caption под картой. */
+.dayCaption {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 12px;
-  margin-top: 14px;
-}
-
-.dayCardLabel {
-  font-family: var(--font-display);
-  font-size: 10.5px;
-  letter-spacing: 0.38em;
-  text-transform: uppercase;
-  color: var(--gold);
-  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7);
-  pointer-events: none;
-  white-space: nowrap;
+  min-height: 60px;
+  margin-top: 6px;
 }
 
 .dayName {
-  font-family: var(--font-display);
-  font-size: 16px;
-  letter-spacing: 0.12em;
-  color: var(--ink);
+  font-family: 'Cormorant Garamond', 'Georgia', serif;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #ece6f5;
   text-transform: uppercase;
 }
 
 .dayHint {
-  font-family: var(--font-display);
-  font-size: 11px;
-  letter-spacing: 0.28em;
+  font-family: 'Cormorant Garamond', 'Georgia', serif;
+  font-size: 12.5px;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--gold-warm);
-  max-width: 280px;
-  line-height: 1.4;
-  text-shadow: 0 0 8px rgba(201, 161, 74, 0.35);
+  color: rgba(217, 184, 120, 0.55);
   animation: hintFade 2.6s ease-in-out infinite;
 }
+
 @keyframes hintFade {
-  0%, 100% { opacity: 0.7; }
+  0%, 100% { opacity: 0.6; }
   50%      { opacity: 1; }
 }
 
-/* «Читать полностью» — заметная золотая pill-кнопка, чтобы пользователь
-   понимал что можно провалиться в полную трактовку карты. */
+/* Pill-кнопка «Читать полностью» — outline gold. */
 .readMore {
-  margin-top: 8px;
-  font-family: var(--font-display);
-  font-size: 11px;
-  letter-spacing: 0.28em;
+  border: 1px solid #d9b878;
+  background: rgba(217, 184, 120, 0.06);
+  border-radius: 24px;
+  padding: 12px 30px;
+  color: #f2dca0;
+  font-family: 'Cormorant Garamond', 'Georgia', serif;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--gold-warm);
-  background: linear-gradient(180deg, rgba(201, 161, 74, 0.12), rgba(201, 161, 74, 0));
-  border: 1px solid var(--line-hot, rgba(212, 175, 55, 0.5));
-  border-radius: var(--radius-pill, 999px);
   cursor: pointer;
-  padding: 8px 18px;
-  transition: color .2s ease, transform .2s ease, background .2s ease, border-color .2s ease;
+  transition: background 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
 }
+
 .readMore:hover {
-  color: var(--gold);
-  background: linear-gradient(180deg, rgba(201, 161, 74, 0.2), rgba(201, 161, 74, 0.05));
-  border-color: var(--gold);
-}
-.readMore:active { transform: scale(0.97); }
-
-.flipBack {
-  margin-top: 4px;
-  font-family: var(--font-display);
-  font-size: 9px;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 2px 6px;
-  transition: color .2s ease;
-}
-.flipBack:hover { color: var(--gold); }
-
-/* ── Нижний стак: ритуалы + дневник, прижаты к низу ───────── */
-.bottomStack {
-  margin-top: auto;
-  padding-bottom: env(safe-area-inset-bottom, 8px);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  position: relative;
-  z-index: 2;
+  background: rgba(217, 184, 120, 0.14);
+  border-color: #f2dca0;
 }
 
-.ritualSection {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.readMore:active {
+  transform: scale(0.97);
 }
 
-/* Ритуалы — один столбец, плитки во весь ряд (как .diaryRow / совместимость).
-   Раньше было 2x2 — текст мелкий и пользователь не сразу понимал что есть что. */
-.ritualGrid {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+/* ── Заголовки секций ───────────────────────────────────────── */
+.sectionHead {
+  margin: 26px 0 14px;
 }
 
-/* «Выбрать наугад» с хаба убрана — теперь живёт внутри ReadingFlowPage (стадия выбора веера). */
-
-/* ── Совместимость + Дневник: одинаковый стиль с плитками раскладов выше.
-   Тот же градиент с золотым radial-tint, тот же border-radius, тот же padding —
-   чтобы вся колонка читалась как единая линейка, без «выделяющейся» строки. */
-.diaryRow {
-  display: grid;
-  grid-template-columns: 40px 1fr 22px;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
-  border: 1px solid var(--line, rgba(212, 175, 55, 0.22));
-  border-radius: 14px;
-  background:
-    radial-gradient(ellipse at left, rgba(212, 175, 55, 0.06), transparent 60%),
-    linear-gradient(180deg, var(--bg-soft, #0d0a18) 0%, #06030f 100%);
-  cursor: pointer;
-  width: 100%;
-  text-align: left;
-  transition: border-color 0.3s ease, transform 0.2s ease;
-}
-.diaryRow:hover {
-  border-color: var(--line-hot);
-  transform: translateY(-1px);
-}
-
-.diaryIcon {
-  width: 40px;
-  height: 40px;
-  color: var(--gold-warm);
+.label {
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  padding: 5px;
-  box-sizing: border-box;
+  gap: 12px;
 }
 
-.diaryText {
+.labelRule {
+  flex: 1;
+  max-width: 40px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(217, 184, 120, 0.3));
+}
+
+.labelRule:last-child {
+  background: linear-gradient(90deg, rgba(217, 184, 120, 0.3), transparent);
+}
+
+.labelText {
+  font-family: 'Cormorant Garamond', 'Georgia', serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: rgba(217, 184, 120, 0.55);
+}
+
+/* ── Список строк раскладов/доп.экранов ─────────────────────── */
+.rowList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(217, 184, 120, 0.3);
+  background: rgba(255, 255, 255, 0.018);
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  color: inherit;
+  transition: border-color 0.2s ease, transform 0.2s ease, background 0.2s ease;
+}
+
+.row:hover {
+  border-color: #d9b878;
+  background: rgba(217, 184, 120, 0.06);
+}
+
+.row:active {
+  transform: scale(0.99);
+}
+
+/* «Поддержать Луну» — тёплая золотая подсветка. */
+.rowWarm {
+  border: 1px solid rgba(217, 184, 120, 0.4);
+  background: linear-gradient(100deg, rgba(217, 184, 120, 0.12), rgba(217, 184, 120, 0.04));
+}
+
+.rowWarm:hover {
+  border-color: #d9b878;
+  background: linear-gradient(100deg, rgba(217, 184, 120, 0.18), rgba(217, 184, 120, 0.06));
+}
+
+.rowIcon {
+  position: relative;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Бейдж-числo top-left, -6/-6 — как в handoff. */
+.rowBadge {
+  position: absolute;
+  top: -6px;
+  left: -6px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #0e0a1f;
+  border: 1px solid rgba(217, 184, 120, 0.3);
+  color: rgba(217, 184, 120, 0.55);
+  font-size: 9px;
+  font-family: system-ui, -apple-system, sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.rowText {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 1px;
   min-width: 0;
 }
 
-.diaryTitle {
-  font-family: var(--font-display);
-  font-size: 15px;
-  letter-spacing: 0.05em;
-  color: var(--ink);
+.rowTitle {
+  color: #ece6f5;
+  font-family: 'Cormorant Garamond', 'Georgia', serif;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
-.diaryHint {
-  font-family: var(--font-italic);
-  font-style: italic;
-  font-size: 13px;
-  color: var(--ink-dim);
+.rowSub {
+  color: rgba(236, 230, 245, 0.32);
+  font-family: 'Cormorant Garamond', 'Georgia', serif;
+  font-size: 12.5px;
+  margin-top: 1px;
 }
 
-/* «Поддержать Луну» — тёплый акцент: чуть больше золота в фоне,
-   живая иконка, но в том же ряду что и совместимость/дневник. */
-.supportRow {
-  background:
-    radial-gradient(ellipse at left, rgba(212, 175, 55, 0.13), transparent 70%),
-    linear-gradient(180deg, #120a20 0%, #07040f 100%);
-  border-color: rgba(212, 175, 55, 0.32);
-}
-.supportRow:hover {
-  border-color: var(--gold, #d4af37);
-}
-.supportRow .diaryIcon {
-  color: var(--gold, #d4af37);
-  filter: drop-shadow(0 0 8px rgba(212, 175, 55, 0.35));
-}
-.supportRow .diaryTitle {
-  color: var(--gold, #d4af37);
-}
-
-.diaryArrow {
-  width: 22px;
-  height: 22px;
+.rowArrow {
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
-  border: 1px solid var(--line);
+  border: 1px solid rgba(217, 184, 120, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--gold);
-  font-size: 12px;
+  color: rgba(217, 184, 120, 0.55);
+  font-size: 14px;
+  flex-shrink: 0;
 }

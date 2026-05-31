@@ -1,0 +1,358 @@
+/* SupportPage — full-page экран доната по новому дизайну.
+   Не bottom-sheet, а самостоятельный screen в стэке HubPage views.
+   Фон — StarField (canvas) на весь экран. */
+
+.shell {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-deep);
+  /* Радиальное свечение сверху как и у HubPage. */
+  background-image: var(--bg-radial);
+  background-repeat: no-repeat;
+}
+
+/* ── Topbar (только кнопка «Назад») ── */
+
+.topbar {
+  position: relative;
+  z-index: 5;
+  padding: 14px 18px 4px;
+  display: flex;
+  align-items: center;
+}
+
+.backBtn {
+  border: 1px solid var(--gold-faint);
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 20px;
+  padding: 8px 16px;
+  color: var(--gold-dim);
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+.backBtn:hover:not(:disabled) {
+  border-color: var(--gold);
+  color: var(--gold-hi);
+}
+.backBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Body — основной контент ── */
+
+.body {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 22px max(22px, env(safe-area-inset-bottom));
+  overflow-y: auto;
+}
+
+/* ── Hero: дышащая золотая луна с блёстками вокруг ── */
+
+.hero {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  margin: 6px auto 10px;
+}
+
+.moonHalo {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(242, 220, 160, 0.28), transparent 66%);
+}
+
+.moon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 64px;
+  height: 64px;
+  margin-top: -32px;
+  margin-left: -32px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 34%, #f6e6b4, #d9b878 60%, #9a7636);
+  box-shadow:
+    0 0 34px rgba(242, 220, 160, 0.5),
+    inset -8px -8px 18px rgba(110, 82, 30, 0.55);
+  animation: lu-breathe 5s ease-in-out infinite;
+}
+
+.sparkleDecor {
+  position: absolute;
+  animation-name: spark-tw;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+@keyframes lu-breathe {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.05); }
+}
+
+@keyframes spark-tw {
+  0%, 100% { opacity: 0.25; transform: scale(0.8) rotate(0); }
+  50%      { opacity: 1;    transform: scale(1.1) rotate(15deg); }
+}
+
+/* ── Лейбл «Свет для Луны» ── */
+
+.label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 6px 0 8px;
+}
+.labelLine {
+  flex: 1 1 auto;
+  max-width: 40px;
+  height: 1px;
+}
+.labelLine:first-child {
+  background: linear-gradient(90deg, transparent, var(--gold-faint));
+}
+.labelLine:last-child {
+  background: linear-gradient(90deg, var(--gold-faint), transparent);
+}
+.labelText {
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--gold-dim);
+}
+
+.intro {
+  text-align: center;
+  color: var(--ink-dim);
+  font-family: var(--font-display);
+  font-size: 14.5px;
+  line-height: 1.55;
+  padding: 0 6px;
+  margin: 0 0 18px;
+}
+
+/* ── 3 тира в ряд ── */
+
+.tiers {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+  margin-bottom: 22px;
+}
+
+.tier {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  padding: 18px 8px 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--gold-faint);
+  border-radius: 16px;
+  cursor: pointer;
+  color: var(--ink);
+  font-family: var(--font-display);
+  min-width: 0;
+  overflow: hidden;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.tier:hover:not(:disabled) {
+  border-color: rgba(217, 184, 120, 0.55);
+}
+.tier:active:not(:disabled) { transform: scale(0.98); }
+
+.tierActive {
+  border-color: var(--gold);
+  background: linear-gradient(180deg, rgba(217, 184, 120, 0.18), rgba(217, 184, 120, 0.05));
+  box-shadow: 0 6px 24px rgba(217, 184, 120, 0.2);
+  transform: translateY(-4px);
+}
+
+.tierGlyph {
+  color: var(--gold);
+  font-size: 20px;
+  line-height: 1;
+  margin-bottom: 2px;
+  transition: color 0.2s ease, text-shadow 0.2s ease;
+}
+.tierActive .tierGlyph {
+  color: var(--gold-hi);
+  text-shadow: 0 0 12px rgba(242, 220, 160, 0.6);
+}
+
+.tierAmount {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
+}
+.tierAmountValue {
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+}
+.tierStar {
+  color: var(--gold-dim);
+  font-size: 13px;
+}
+
+.tierName {
+  color: var(--ink-dim);
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-top: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  transition: color 0.2s ease;
+}
+.tierActive .tierName { color: var(--gold-hi); }
+
+.tierDesc {
+  color: var(--ink-faint);
+  font-family: var(--font-display);
+  font-size: 10.5px;
+  line-height: 1.35;
+  margin-top: 2px;
+  min-height: 26px;
+  text-align: center;
+}
+
+/* ── Error + actions ── */
+
+.error {
+  margin: 0 0 10px;
+  text-align: center;
+  font-size: 12px;
+  color: #e87e7e;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.laterBtn {
+  background: none;
+  border: none;
+  padding: 4px 12px;
+  color: var(--ink-faint);
+  font-family: var(--font-display);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+.laterBtn:hover:not(:disabled) { color: var(--gold); }
+.laterBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.fineprint {
+  margin: 0;
+  text-align: center;
+  color: var(--ink-faint);
+  font-family: var(--font-display);
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+}
+
+/* ───────────────────────────────────────
+   Thank-you экран — после успешной оплаты.
+   ─────────────────────────────────────── */
+
+.thanks {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 20px 12px;
+  gap: 14px;
+}
+
+.thanksMoonStage {
+  position: relative;
+  width: 100%;
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.thanksMoonGlow {
+  position: absolute;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(217, 184, 120, 0.5) 0%, rgba(217, 184, 120, 0.2) 35%, transparent 72%);
+  filter: blur(6px);
+}
+
+.thanksMoon {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 32%, #fff7d6 0%, #f6dd97 38%, #d9b878 72%, #8b6b1f 100%);
+  box-shadow:
+    0 0 28px rgba(217, 184, 120, 0.6),
+    0 0 60px rgba(217, 184, 120, 0.35);
+}
+
+.thanksSparkle {
+  position: absolute;
+  color: var(--gold);
+  text-shadow: 0 0 8px rgba(217, 184, 120, 0.8);
+  pointer-events: none;
+  user-select: none;
+}
+
+.thanksTitle {
+  margin: 6px 0 0;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold-hi);
+  text-shadow: 0 0 16px rgba(217, 184, 120, 0.4);
+}
+
+.thanksText {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--ink-dim);
+  max-width: 320px;
+}
+
+.thanksAction { margin-top: 10px; }

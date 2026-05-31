@@ -1,12 +1,10 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ScreenContainer } from '@/components/ScreenContainer/ScreenContainer';
-import { MoonBackground } from '@/components/MoonBackground/MoonBackground';
+import { StarField } from '@/components/StarField/StarField';
 import { GoldButton } from '@/components/GoldButton/GoldButton';
 import { CardBack } from '@/components/TarotCard/CardBack';
 import { OrnamentalDivider } from '@/components/OrnamentalDivider/OrnamentalDivider';
-import { OrbitalLoader } from '@/components/OrbitalLoader/OrbitalLoader';
-import { WhisperText } from '@/components/WhisperText/WhisperText';
 import { BackButton } from '@/components/BackButton/BackButton';
 import { RichText } from '@/components/RichText/RichText';
 import { cardImageUrl, createReading, type Reading } from '@/api/reading';
@@ -38,6 +36,7 @@ const MAX_Q = 500;
 
 export function ReadingFlowPage({ spreadId, onClose }: ReadingFlowPageProps) {
   const spread = getSpread(spreadId);
+  const calmRef = useRef(1);
   const [stage, setStage] = useState<Stage>('question');
   const [question, setQuestion] = useState('');
   const [picked, setPicked] = useState<number[]>([]); // позиции карт в веере
@@ -97,7 +96,7 @@ export function ReadingFlowPage({ spreadId, onClose }: ReadingFlowPageProps) {
 
   return (
     <ScreenContainer>
-      <MoonBackground />
+      <StarField calmRef={calmRef} />
       <div className={styles.shell}>
         <div className={styles.topbar}>
           <BackButton onClick={onClose} />
@@ -506,21 +505,13 @@ function DrawStage({ spread, autoFlow, picked, onPick, onAutoPick, error }: Draw
             className={styles.waitingOverlay}
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            /* Появляется когда картам остаётся ~30% полёта (delay 1.05s
-               = hold 0.35s + 60% от полёта 1.2s). Лоадер вступает плавно
-               пока карты ещё видны но уже улетают. */
+            /* Дышащий золотой полумесяц + капс «ЛУНА РАСКРЫВАЕТ РАСКЛАД».
+               По новому дизайну — простой, без орбиталей и эмодзи. */
             transition={{ delay: 1.05, duration: 0.7, ease: [0.22, 0.85, 0.3, 1] }}
             aria-hidden="true"
           >
-            <OrbitalLoader />
-            <motion.div
-              animate={{ opacity: [0.5, 1, 0.5] }}
-              transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
-            >
-              <WhisperText size="m" tone="dim">
-                ✦ Луна раскрывает расклад ✦
-              </WhisperText>
-            </motion.div>
+            <div className={styles.waitingMoon} />
+            <div className={styles.waitingCaption}>Луна раскрывает расклад</div>
           </motion.div>
         )}
       </div>
