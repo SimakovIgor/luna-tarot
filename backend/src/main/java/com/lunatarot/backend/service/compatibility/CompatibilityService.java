@@ -1,6 +1,8 @@
 package com.lunatarot.backend.service.compatibility;
 
+import com.lunatarot.backend.config.LunaTelegramProperties;
 import com.lunatarot.backend.domain.model.CompatibilityCheckEntity;
+import com.lunatarot.backend.domain.model.UserEntity;
 import com.lunatarot.backend.domain.model.enums.CompatibilityStatus;
 import com.lunatarot.backend.domain.model.enums.ZodiacSign;
 import com.lunatarot.backend.domain.repository.CompatibilityCheckRepository;
@@ -9,11 +11,13 @@ import com.lunatarot.backend.service.EsotericProfileCalculator;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.Period;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Рассчитывает совместимость и сохраняет результат как запись в Дневник.
@@ -29,18 +33,26 @@ public class CompatibilityService {
     private static final int MAX_NAME = 64;
     private static final int HISTORY_LIMIT = 50;
 
+    /** Длина slug'а в символах. 12 hex-символов = 48 бит — ~1e14 вариантов. */
+    private static final int SLUG_LENGTH = 12;
+    private static final SecureRandom RANDOM = new SecureRandom();
+    private static final String SLUG_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789";
+
     private final EsotericProfileCalculator calculator;
     private final CompatibilityGenerator generator;
     private final CompatibilityCheckRepository repository;
+    private final LunaTelegramProperties telegramProperties;
     private final Clock clock;
 
     public CompatibilityService(EsotericProfileCalculator calculator,
                                 CompatibilityGenerator generator,
                                 CompatibilityCheckRepository repository,
+                                LunaTelegramProperties telegramProperties,
                                 Clock clock) {
         this.calculator = calculator;
         this.generator = generator;
         this.repository = repository;
+        this.telegramProperties = telegramProperties;
         this.clock = clock;
     }
 
@@ -96,6 +108,109 @@ public class CompatibilityService {
     /** История совместимостей юзера (инициированные им + те, куда его пригласили). */
     public List<CompatibilityCheckEntity> historyFor(long userId) {
         return repository.findHistoryByUser(userId, HISTORY_LIMIT);
+    }
+
+    // ── Invite-flow ─────────────────────────────────────────────
+
+    /**
+     * Создать PENDING_INVITE запись с уникальным slug-ом. Инициатор отправит
+     * Telegram-ссылку другу; когда тот войдёт — {@link #acceptInvite}.
+     */
+    @Transactional
+    public CompatibilityCheckEntity createInvite(UserEntity initiator) {
+        if (initiator.getZodiac() == null) {
+            throw new IllegalStateException(
+                "Сначала укажи свою дату рождения в профиле — без этого Луна не посчитает совместимость."
+            );
+        }
+        String slug = generateUniqueSlug();
+        // PENDING-запись: партнёра ещё нет, score/text заполним при accept.
+        // partner_name временно «—» (NOT NULL), знак — снимок инициатора (НЕ
+        // партнёра — partner_zodiac заполнится при accept).
+        CompatibilityCheckEntity entity = CompatibilityCheckEntity.builder()
+            .initiatorUserId(initiator.getId())
+            .partnerName("—")
+            .initiatorZodiac(initiator.getZodiac())
+            .partnerZodiac(initiator.getZodiac()) // placeholder, перезапишется
+            .score(50) // placeholder, перезапишется
+            .resultText("")
+            .inviteSlug(slug)
+            .status(CompatibilityStatus.PENDING_INVITE)
+            .build();
+        return repository.save(entity);
+    }
+
+    /** Поиск PENDING-приглашения по slug — для friend'а, перешедшего по ссылке. */
+    public Optional<CompatibilityCheckEntity> findPendingInvite(String slug) {
+        return repository.findByInviteSlug(slug)
+            .filter(c -> c.getStatus() == CompatibilityStatus.PENDING_INVITE);
+    }
+
+    /**
+     * Friend перешёл по deeplink и идентифицирован как user.
+     * Заполняем partner_*, генерируем score+text, переключаем на COMPLETED.
+     * После этого запись видна обоим в Дневнике.
+     */
+    @Transactional
+    public CompatibilityCheckEntity acceptInvite(String slug,
+                                                 UserEntity friend,
+                                                 UserEntity initiator) {
+        CompatibilityCheckEntity entity = repository.findByInviteSlug(slug)
+            .orElseThrow(() -> new IllegalArgumentException("Приглашение не найдено или уже использовано"));
+        if (entity.getStatus() != CompatibilityStatus.PENDING_INVITE) {
+            throw new IllegalArgumentException("Это приглашение уже завершено");
+        }
+        if (entity.getInitiatorUserId().equals(friend.getId())) {
+            throw new IllegalArgumentException("Нельзя сравнивать себя с собой");
+        }
+        ZodiacSign friendZodiac = friend.getZodiac();
+        if (friendZodiac == null) {
+            if (friend.getBirthDate() == null) {
+                throw new IllegalStateException("Сначала укажи свою дату рождения в профиле");
+            }
+            friendZodiac = calculator.calculate(friend.getBirthDate()).zodiac();
+        }
+        Integer friendAge = ageFrom(friend.getBirthDate());
+        Integer initiatorAge = ageFrom(initiator.getBirthDate());
+        CompatibilityOutput output = generator.generate(
+            initiator.getName(), initiator.getZodiac(), initiatorAge,
+            friend.getName(), friendZodiac, friendAge
+        );
+        entity.setPartnerUserId(friend.getId());
+        entity.setPartnerName(friend.getName());
+        entity.setPartnerBirthDate(friend.getBirthDate());
+        entity.setPartnerZodiac(friendZodiac);
+        entity.setScore(output.score());
+        entity.setResultText(output.text());
+        entity.setStatus(CompatibilityStatus.COMPLETED);
+        // Slug больше не нужен, освобождаем чтоб не висел в уникальном индексе.
+        entity.setInviteSlug(null);
+        return repository.save(entity);
+    }
+
+    /** Telegram-ссылка вида https://t.me/{bot}?startapp=compat_{slug}. */
+    public String buildShareUrl(String slug) {
+        String bot = telegramProperties.botUsername();
+        return "https://t.me/" + bot + "?startapp=compat_" + slug;
+    }
+
+    private String generateUniqueSlug() {
+        // 5 попыток на случай коллизии (хотя при 36^12 это вряд ли понадобится).
+        for (int attempt = 0; attempt < 5; attempt++) {
+            String candidate = randomSlug();
+            if (repository.findByInviteSlug(candidate).isEmpty()) {
+                return candidate;
+            }
+        }
+        throw new IllegalStateException("Не удалось сгенерировать уникальный slug");
+    }
+
+    private String randomSlug() {
+        StringBuilder sb = new StringBuilder(SLUG_LENGTH);
+        for (int i = 0; i < SLUG_LENGTH; i++) {
+            sb.append(SLUG_ALPHABET.charAt(RANDOM.nextInt(SLUG_ALPHABET.length())));
+        }
+        return sb.toString();
     }
 
     private Integer ageFrom(LocalDate birthDate) {
