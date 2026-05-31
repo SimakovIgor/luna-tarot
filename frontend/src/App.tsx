@@ -192,7 +192,9 @@ function renderBody(
   body: BodyProps,
 ) {
   if (state.kind === 'loading') {
-    return <SplashLoading />;
+    // Никакого «Luna»-текста — IntroSplash сам показывает полумесяц + PNG-лого.
+    // Дублирующий SplashLoading удалён, чтобы не было двух лого одновременно.
+    return null;
   }
   if (state.kind === 'no-telegram') {
     return <NoTelegramHint />;
@@ -232,15 +234,6 @@ async function bootstrap(): Promise<AppState> {
     const reason = e instanceof Error ? e.message : 'unknown';
     return { kind: 'auth-failed', reason };
   }
-}
-
-function SplashLoading() {
-  return (
-    <div className="splash">
-      <div className="splash-wordmark">Luna</div>
-      <div className="splash-sub">зеркало пробуждается…</div>
-    </div>
-  );
 }
 
 function NoTelegramHint() {

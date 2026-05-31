@@ -47,23 +47,22 @@
   letter-spacing: .02em;
   color: var(--ink);
   line-height: 1.2;
-  max-width: 320px;
   margin: 0;
+  text-align: center;
 }
 .subtitle {
   font-family: var(--font-display);
   font-weight: 400;
   font-size: 14px;
   color: var(--ink-dim);
-  max-width: 300px;
   line-height: 1.5;
   margin: 0;
+  text-align: center;
 }
 
-/* Question step */
+/* Question step — занимает всю ширину контента (.shell уже max-width: 414). */
 .questionArea {
   width: 100%;
-  max-width: 320px;
 }
 .questionInput {
   width: 100%;

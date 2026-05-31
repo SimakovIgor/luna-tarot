@@ -4,7 +4,11 @@
   flex-direction: column;
   position: relative;
   z-index: 2;
-  padding-top: 8px;
+  width: 100%;
+  max-width: var(--page-max-width);
+  margin: 0 auto;
+  padding: 8px var(--page-padding-x) 0;
+  box-sizing: border-box;
 }
 
 /* Прогресс — 3 точки, едва заметные */
