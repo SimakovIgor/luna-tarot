@@ -6,6 +6,7 @@ import { GoldButton } from '@/components/GoldButton/GoldButton';
 import { RichText } from '@/components/RichText/RichText';
 import { PersonalSky } from '@/components/PersonalSky/PersonalSky';
 import { SkyShareSheet } from '@/components/PersonalSky/SkyShareSheet';
+import { LunarToday } from '@/components/LunarToday/LunarToday';
 import { type MeResponse, type Gender, updateMe, fetchMe } from '@/api/me';
 import { ZODIAC_INFO } from '@/zodiac';
 import type { ZodiacSign } from '@/api/horoscope';
@@ -142,6 +143,10 @@ export function ProfilePage({
             ✦ Изменить данные
           </GoldButton>
         </div>
+
+        {/* Луна сегодня — фаза, день цикла, ближайшее событие + совет. */}
+        <SectionLabel>Луна сегодня</SectionLabel>
+        <LunarToday me={me} />
 
         {/* Твоё небо — Constellation + поэтичная строка + share. */}
         {me.zodiac && (

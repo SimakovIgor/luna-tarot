@@ -1,0 +1,109 @@
+/* «Луна сегодня» — карточка в профиле. Один ряд с SVG-моей слева,
+   текстом по центру и «+» справа. По тапу — раскрывается совет
+   и (если совпадает с натальной) персональная фраза. */
+
+.card {
+  width: 100%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(0, 0, 0, 0.18)),
+              var(--bg-soft);
+  border: 1px solid var(--gold-faint, rgba(217, 184, 120, 0.3));
+  border-radius: 14px;
+  padding: 14px 16px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  transition: border-color 0.3s ease;
+}
+.card:hover { border-color: var(--gold); }
+.cardOpen {
+  border-color: var(--gold);
+  background: linear-gradient(180deg, rgba(217, 184, 120, 0.05), rgba(217, 184, 120, 0)),
+              var(--bg-soft);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 64px 1fr 22px;
+  gap: 14px;
+  align-items: center;
+}
+
+.moonWrap {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 0 12px rgba(242, 220, 160, 0.35));
+  animation: moon-breathe 5s ease-in-out infinite;
+}
+@keyframes moon-breathe {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.03); }
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.phaseName {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: 0.02em;
+}
+.subline {
+  font-family: var(--font-display);
+  font-size: 12.5px;
+  color: var(--ink-dim);
+  letter-spacing: 0.04em;
+}
+
+.chevron {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--gold-faint, rgba(217, 184, 120, 0.3));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gold);
+  font-size: 14px;
+  line-height: 1;
+  transition: border-color 0.2s ease;
+}
+.cardOpen .chevron {
+  border-color: var(--gold);
+}
+
+.expand {
+  overflow: hidden;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--gold-faint, rgba(217, 184, 120, 0.25));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.advice {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--ink);
+}
+.echo {
+  margin: 0;
+  padding: 10px 12px;
+  background: rgba(217, 184, 120, 0.07);
+  border-left: 2px solid var(--gold);
+  border-radius: 6px;
+  font-family: var(--font-display);
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--gold-hi, #f2dca0);
+}

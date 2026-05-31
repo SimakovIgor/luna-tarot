@@ -1,6 +1,18 @@
 import { api } from './client';
 
 export type Gender = 'MALE' | 'FEMALE' | 'UNSPECIFIED';
+
+/** Натальная фаза Луны — рассчитывается из ДР, не меняется. */
+export type LunarPhase =
+  | 'NEW'
+  | 'WAXING_CRESCENT'
+  | 'FIRST_QUARTER'
+  | 'WAXING_GIBBOUS'
+  | 'FULL'
+  | 'WANING_GIBBOUS'
+  | 'LAST_QUARTER'
+  | 'WANING_CRESCENT';
+
 export type ConversationState =
   | 'NEW'
   | 'AWAITING_NAME'
@@ -16,7 +28,7 @@ export interface MeResponse {
   birthDate: string | null;
   zodiac: string | null;
   lifePathNumber: number | null;
-  lunarPhase: string | null;
+  lunarPhase: LunarPhase | null;
   conversationState: ConversationState;
   /** Сумма всех Telegram Stars донатов от пользователя. 0 если не донатил. */
   donatedStars: number;
