@@ -26,9 +26,9 @@ interface Tier {
 }
 
 const TIERS: Tier[] = [
-  { amount: 20,  glyph: '✦', title: 'Шёпот',       hint: 'тихое спасибо' },
-  { amount: 50,  glyph: '✧', title: 'Искра',       hint: 'тёплый огонёк благодарности' },
-  { amount: 150, glyph: '✶', title: 'Лунный свет', hint: 'дыхание полнолуния' },
+  { amount: 20,  glyph: '✦', title: 'Шёпот',  hint: 'тихое спасибо' },
+  { amount: 50,  glyph: '✧', title: 'Искра',  hint: 'тёплый огонёк благодарности' },
+  { amount: 150, glyph: '✶', title: 'Сияние', hint: 'дыхание полнолуния' },
 ];
 
 const DEFAULT_TIER: DonationAmount = 50;

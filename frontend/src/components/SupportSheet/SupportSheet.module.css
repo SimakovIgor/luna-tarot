@@ -49,11 +49,13 @@
 .handle:hover { background: rgba(212, 175, 55, 0.65); }
 
 .body {
-  padding: 8px 22px max(22px, env(safe-area-inset-bottom));
+  padding: 8px 16px max(22px, env(safe-area-inset-bottom));
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 14px;
+  box-sizing: border-box;
+  width: 100%;
 }
 
 /* ───── header ───── */
@@ -80,11 +82,12 @@
 .title {
   margin: 0;
   font-family: var(--font-display, 'Cinzel', serif);
-  font-size: 18px;
-  letter-spacing: 0.22em;
+  font-size: 17px;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--gold, #d4af37);
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .subtitle {
@@ -101,9 +104,10 @@
 
 .tiers {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
   margin-top: 2px;
+  width: 100%;
 }
 
 .tier {
@@ -113,13 +117,15 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 14px 6px 12px;
+  padding: 14px 4px 12px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0));
   border: 1px solid rgba(212, 175, 55, 0.2);
   border-radius: 14px;
   cursor: pointer;
   color: var(--ink, rgba(255, 255, 255, 0.92));
+  min-width: 0;
+  overflow: hidden;
   transition:
     border-color 0.25s ease,
     background 0.3s ease,
@@ -159,25 +165,30 @@
 
 .tierAmount {
   font-family: var(--font-display, 'Cinzel', serif);
-  font-size: 17px;
-  letter-spacing: 0.04em;
+  font-size: 16px;
+  letter-spacing: 0.02em;
   color: var(--gold, #d4af37);
   display: inline-flex;
   align-items: baseline;
-  gap: 2px;
+  gap: 1px;
+  white-space: nowrap;
 }
 .tierStar {
-  font-size: 14px;
+  font-size: 13px;
   margin-left: 1px;
 }
 
 .tierTitle {
   font-family: var(--font-display, 'Cinzel', serif);
   font-size: 10px;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--ink-dim, rgba(255, 255, 255, 0.6));
   transition: color 0.3s ease;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .tierActive .tierTitle {
   color: var(--ink, #ede0c4);
