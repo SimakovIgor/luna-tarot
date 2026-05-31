@@ -1,17 +1,27 @@
-import { useEffect, useState, type MutableRefObject } from 'react';
+import { lazy, Suspense, useEffect, useState, type MutableRefObject } from 'react';
 import { motion } from 'framer-motion';
 import { DayCard } from '@/components/DayCard/DayCard';
 import { fetchMe, type MeResponse } from '@/api/me';
 import { cardImageUrl, type Reading } from '@/api/reading';
 import { formatTodayRu } from '@/util/format';
 import { SPREAD_LIST, type SpreadId } from '@/spreads/catalog';
-import { ReadingFlowPage } from './ReadingFlowPage';
-import { CardOfDayPage } from './CardOfDayPage';
-import { DiaryPage } from './DiaryPage';
-import { ProfilePage } from './ProfilePage';
-import { CompatibilityPage } from './CompatibilityPage';
-import { SupportPage } from './SupportPage';
 import styles from './HubPage.module.css';
+
+// Тяжёлые под-страницы грузятся в момент перехода (а не в initial bundle).
+// На главном экране они не нужны — это даёт быстрый first paint в Telegram WebView.
+const ReadingFlowPage   = lazy(() => import('./ReadingFlowPage').then((m) => ({ default: m.ReadingFlowPage })));
+const CardOfDayPage     = lazy(() => import('./CardOfDayPage').then((m) => ({ default: m.CardOfDayPage })));
+const DiaryPage         = lazy(() => import('./DiaryPage').then((m) => ({ default: m.DiaryPage })));
+const ProfilePage       = lazy(() => import('./ProfilePage').then((m) => ({ default: m.ProfilePage })));
+const CompatibilityPage = lazy(() => import('./CompatibilityPage').then((m) => ({ default: m.CompatibilityPage })));
+const SupportPage       = lazy(() => import('./SupportPage').then((m) => ({ default: m.SupportPage })));
+
+/**
+ * Пустой fallback для Suspense на под-страницах — экран и так анимирует
+ * вход через AnimatePresence/motion на странице, отдельный лоадер только
+ * добавит мерцания.
+ */
+const SUB_PAGE_FALLBACK = null;
 
 interface HubPageProps {
   me: MeResponse;
@@ -80,48 +90,66 @@ export function HubPage({
   }, [view.name, onSubViewChange]);
 
   if (view.name === 'reading') {
-    return <ReadingFlowPage spreadId={view.spreadId} onClose={() => setView({ name: 'hub' })} />;
+    return (
+      <Suspense fallback={SUB_PAGE_FALLBACK}>
+        <ReadingFlowPage spreadId={view.spreadId} onClose={() => setView({ name: 'hub' })} />
+      </Suspense>
+    );
   }
   if (view.name === 'card-of-day') {
-    return <CardOfDayPage onClose={() => setView({ name: 'hub' })} preloaded={cardOfDay} startFlipped={dayFlipped} />;
+    return (
+      <Suspense fallback={SUB_PAGE_FALLBACK}>
+        <CardOfDayPage onClose={() => setView({ name: 'hub' })} preloaded={cardOfDay} startFlipped={dayFlipped} />
+      </Suspense>
+    );
   }
   if (view.name === 'diary') {
-    return <DiaryPage onClose={() => setView({ name: 'hub' })} />;
+    return (
+      <Suspense fallback={SUB_PAGE_FALLBACK}>
+        <DiaryPage onClose={() => setView({ name: 'hub' })} />
+      </Suspense>
+    );
   }
   if (view.name === 'profile') {
     return (
-      <ProfilePage
-        me={me}
-        onMeUpdated={onMeUpdated}
-        onClose={() => setView({ name: 'hub' })}
-        horoscope={horoscope}
-        horoscopeError={horoscopeError}
-        onTapSupport={() => setView({ name: 'support' })}
-      />
+      <Suspense fallback={SUB_PAGE_FALLBACK}>
+        <ProfilePage
+          me={me}
+          onMeUpdated={onMeUpdated}
+          onClose={() => setView({ name: 'hub' })}
+          horoscope={horoscope}
+          horoscopeError={horoscopeError}
+          onTapSupport={() => setView({ name: 'support' })}
+        />
+      </Suspense>
     );
   }
   if (view.name === 'compatibility') {
     return (
-      <CompatibilityPage
-        onClose={() => setView({ name: 'hub' })}
-        pendingInviteSlug={view.inviteSlug}
-        myName={me.name}
-      />
+      <Suspense fallback={SUB_PAGE_FALLBACK}>
+        <CompatibilityPage
+          onClose={() => setView({ name: 'hub' })}
+          pendingInviteSlug={view.inviteSlug}
+          myName={me.name}
+        />
+      </Suspense>
     );
   }
   if (view.name === 'support') {
     return (
-      <SupportPage
-        onClose={() => setView({ name: 'hub' })}
-        onDonated={async () => {
-          try {
-            const fresh = await fetchMe();
-            onMeUpdated(fresh);
-          } catch {
-            // тихо игнорируем — обновим в следующий заход
-          }
-        }}
-      />
+      <Suspense fallback={SUB_PAGE_FALLBACK}>
+        <SupportPage
+          onClose={() => setView({ name: 'hub' })}
+          onDonated={async () => {
+            try {
+              const fresh = await fetchMe();
+              onMeUpdated(fresh);
+            } catch {
+              // тихо игнорируем — обновим в следующий заход
+            }
+          }}
+        />
+      </Suspense>
     );
   }
 

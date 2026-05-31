@@ -9,7 +9,8 @@ import { RichText } from '@/components/RichText/RichText';
 import { cardImageUrl, createReading, type Reading } from '@/api/reading';
 import { track, reportError } from '@/observability';
 import { haptic } from '@/telegram/webapp';
-import { generatePostcard, sharePostcard } from '@/util/postcard';
+// postcard.ts весит ~30 KB (canvas-рендер, шрифты, helpers). Загружаем динамически
+// в момент клика по «Поделиться» — initial bundle не несёт этот вес.
 import { buildShareText } from '@/util/shareText';
 import { BOT_URL } from '@/config';
 import { getSpread, type SpreadId, type SpreadDescriptor } from '@/spreads/catalog';
@@ -662,6 +663,7 @@ function ShareButton({ reading, spread }: { reading: Reading; spread: SpreadDesc
     track('share_clicked', { spread_id: spread.id });
     try {
       const labels = spread.positions.map((p) => p.label);
+      const { generatePostcard, sharePostcard } = await import('@/util/postcard');
       const blob = await generatePostcard(reading, labels);
       const result = await sharePostcard(blob, {
         title: 'Luna · мой расклад',

@@ -1,19 +1,56 @@
 /**
  * Observability: Sentry (ошибки JS) + PostHog (продуктовая аналитика).
  *
- * Оба SDK Cloud-only (хосты EU для GDPR), на нашем VPS ничего не жрут.
- * Ключи — публичные client-side (Sentry DSN специально дизайнится как
- * embedded-в-бандл, PostHog «Project token» помечен в их UI как
- * «Safe to use in public apps»), поэтому hardcoded без env-обвязки.
+ * Оба SDK Cloud-only, на нашем VPS ничего не жрут.
  *
- * Используем как:
+ * ┌─────────────────────────────────────────────────────────────┐
+ * │  TRACK-POINTS (используются для воронок в PostHog UI)        │
+ * └─────────────────────────────────────────────────────────────┘
+ *
+ * Лайфцикл:
+ *  - app_opened              — каждое открытие Mini App (main.tsx)
+ *  - onboarding_completed    { zodiac } — юзер дошёл до конца онбординга
+ *
+ * Расклады:
+ *  - spread_started          { spread_id, has_question } — нажал «Дальше»
+ *  - spread_completed        { spread_id } — все карты показаны
+ *  - share_clicked           { spread_id } — тапнул «Поделиться»
+ *  - share_completed         { spread_id, result } — share-диалог сработал
+ *
+ * Совместимость:
+ *  - compat_solo_submitted   — отправил форму solo (имя+ДР партнёра)
+ *  - compat_invite_created   — создал invite-ссылку
+ *  - compat_invite_shared    — нажал «Поделиться в Telegram»
+ *  - compat_invite_accepted  — friend принял приглашение
+ *  - compat_completed        { mode: 'solo'|'invite', score } — результат показан
+ *
+ * Личное небо:
+ *  - share_sky_clicked       { zodiac } — открыл share-sheet неба
+ *  - share_sky_completed     { zodiac, result } — открытка отправлена
+ *
+ * Донат:
+ *  - donate_initiated        { stars } — открыл invoice
+ *  - donate_completed        { stars } — оплата прошла
+ *  - donate_cancelled        { stars } — закрыл invoice
+ *  - donate_failed           { stars, status } — ошибка платежа
+ *
+ * ┌─────────────────────────────────────────────────────────────┐
+ * │  ПРЕДЛАГАЕМЫЕ ВОРОНКИ В POSTHOG (Insights → Funnels)         │
+ * └─────────────────────────────────────────────────────────────┘
+ *
+ *  1. Activation:      app_opened → onboarding_completed
+ *  2. Engagement:      app_opened → spread_started → spread_completed
+ *  3. Viral (расклад): spread_completed → share_clicked → share_completed
+ *  4. Viral (небо):    app_opened → share_sky_clicked → share_sky_completed
+ *  5. Viral (compat):  compat_invite_created → compat_invite_shared → compat_invite_accepted
+ *  6. Donation:        app_opened → donate_initiated → donate_completed
+ *  7. Compat solo:     app_opened → compat_solo_submitted → compat_completed
+ *
+ * Использование:
  *   import { initObservability, identify, track } from '@/observability';
- *   // на старте App:
- *   initObservability();
- *   // после auth:
- *   identify(me.id, { name: me.name, zodiac: me.zodiac });
- *   // в любом месте:
- *   track('spread_completed', { spread_id: 'YES_NO' });
+ *   initObservability();                       // на старте App
+ *   identify(me.id, { name, zodiac });         // после auth
+ *   track('spread_completed', { spread_id }); // в любом месте
  */
 
 import * as Sentry from '@sentry/react';

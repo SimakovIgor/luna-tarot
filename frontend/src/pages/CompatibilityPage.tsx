@@ -6,7 +6,7 @@ import { GoldButton } from '@/components/GoldButton/GoldButton';
 import { BackButton } from '@/components/BackButton/BackButton';
 import { RichText } from '@/components/RichText/RichText';
 import { Orb } from '@/components/Orb/Orb';
-import { generateCompatibilityPostcard, sharePostcard } from '@/util/postcard';
+// postcard.ts ленится — load по клику «Поделиться» (см. CompatShareButton).
 import { buildCompatibilityShareText } from '@/util/shareText';
 import { BOT_URL } from '@/config';
 import { extractFirstSentence } from '@/util/text';
@@ -21,6 +21,7 @@ import {
 } from '@/api/compatibility';
 import { ZODIAC_INFO } from '@/zodiac';
 import { haptic, isInTelegram, shareViaTelegram } from '@/telegram/webapp';
+import { track } from '@/observability';
 import styles from './CompatibilityPage.module.css';
 
 interface CompatibilityPageProps {
@@ -87,11 +88,13 @@ export function CompatibilityPage({ onClose, pendingInviteSlug, myName }: Compat
       return;
     }
     setStage('loading');
+    track('compat_solo_submitted');
     try {
       const res = await calculateCompatibility({ partnerName: trimmedName, partnerBirthDate: partnerDate });
       setResult(res);
       haptic('medium');
       setStage('result');
+      track('compat_completed', { mode: 'solo', score: res.score });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'не вышло');
       setStage('form');
@@ -113,6 +116,7 @@ export function CompatibilityPage({ onClose, pendingInviteSlug, myName }: Compat
     setError(null);
     setStage('invite-create');
     haptic('light');
+    track('compat_invite_created');
     try {
       const created = await createCompatibilityInvite();
       setInvite(created);
@@ -131,6 +135,7 @@ export function CompatibilityPage({ onClose, pendingInviteSlug, myName }: Compat
   const handleShareInvite = () => {
     if (!invite) return;
     haptic('medium');
+    track('compat_invite_shared');
     const text = 'Пойдём, спросим у Луны? Открой ссылку — она посчитает нашу совместимость.';
     const nav = navigator as Navigator & {
       share?: (data: { title?: string; text?: string; url?: string }) => Promise<void>;
@@ -169,10 +174,12 @@ export function CompatibilityPage({ onClose, pendingInviteSlug, myName }: Compat
     setError(null);
     setStage('loading');
     haptic('medium');
+    track('compat_invite_accepted');
     try {
       const res = await acceptCompatibilityInvite(pendingInviteSlug);
       setResult(res);
       setStage('result');
+      track('compat_completed', { mode: 'invite', score: res.score });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'не вышло');
       setStage('invitee');
@@ -525,6 +532,7 @@ function CompatShareButton({ result }: { result: CompatibilityResponse }) {
       const me = ZODIAC_INFO[result.myZodiac];
       const partner = ZODIAC_INFO[result.partnerZodiac];
       const caption = extractFirstSentence(result.text);
+      const { generateCompatibilityPostcard, sharePostcard } = await import('@/util/postcard');
       const blob = await generateCompatibilityPostcard({
         mySign: me.sign, mySymbol: me.symbol,
         partnerSign: partner.sign, partnerSymbol: partner.symbol,

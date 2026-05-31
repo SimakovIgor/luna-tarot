@@ -6,7 +6,7 @@ import { ZODIAC_INFO } from '@/zodiac';
 import { haptic } from '@/telegram/webapp';
 import { BOT_URL } from '@/config';
 import { track, reportError } from '@/observability';
-import { generateSkyPostcard, sharePostcard } from '@/util/postcard';
+// postcard.ts грузим в момент клика «Поделиться» — initial bundle лёгкий.
 import type { MeResponse } from '@/api/me';
 import type { ZodiacSign } from '@/api/horoscope';
 import styles from './SkyShareSheet.module.css';
@@ -44,6 +44,7 @@ export function SkyShareSheet({ open, onClose, me, poeticLine }: SkyShareSheetPr
 
     const text = `${poeticLine}\n\n— моё небо ☽`;
     try {
+      const { generateSkyPostcard, sharePostcard } = await import('@/util/postcard');
       const blob = await generateSkyPostcard({
         zodiac,
         signLabel: info.sign,
