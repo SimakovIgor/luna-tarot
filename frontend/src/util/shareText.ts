@@ -21,7 +21,7 @@ export function buildShareText(spreadId: SpreadId): string {
     case 'YEAR_WHEEL':
       return '🌙 Колесо года от Луны — двенадцать месяцев вперёд. Сделай свой:';
     default:
-      return '✦ Я заглянул в Зеркало Луны — карты ответили. Сделай свой расклад:';
+      return '✦ Я спросил у Луны — карты ответили. Сделай свой расклад:';
   }
 }
 

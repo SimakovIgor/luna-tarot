@@ -14,7 +14,7 @@ const sizeClass: Record<Size, string> = {
   s: styles.sizeS,
 };
 
-export function BrandMark({ size = 'm', subline = 'Зеркало Таро' }: BrandMarkProps) {
+export function BrandMark({ size = 'm', subline = 'Луна · Таро' }: BrandMarkProps) {
   return (
     <div className={styles.brand}>
       <div className={`${styles.wordmark} ${sizeClass[size]}`}>Luna</div>

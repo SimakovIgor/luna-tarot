@@ -19,7 +19,7 @@ import java.util.List;
 @Component
 public class MainMenuBuilder {
 
-    public static final String BUTTON_TEXT = "✨ Войти в Зеркало";
+    public static final String BUTTON_TEXT = "✨ Открыть Луну";
 
     private final LunaTelegramProperties properties;
 

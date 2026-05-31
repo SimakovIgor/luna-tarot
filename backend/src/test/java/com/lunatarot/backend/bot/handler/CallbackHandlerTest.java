@@ -24,7 +24,7 @@ class CallbackHandlerTest extends BaseIT {
 
         assertThat(step.keyboard()).isEqualTo(OnboardingStep.Keyboard.MAIN_MENU);
         assertThat(step.attachments()).hasSize(1);
-        assertThat(step.message()).contains("Зеркало");
+        assertThat(step.message()).contains("Лун");
     }
 
     @Test

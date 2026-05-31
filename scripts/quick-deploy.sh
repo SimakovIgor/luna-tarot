@@ -57,8 +57,13 @@ ssh "$SSH_HOST" "cd $REMOTE_DIR && \
     docker compose -f docker-compose.prod.yml --env-file .env up -d --build backend 2>&1 | tail -4"
 
 echo "▸ health check..."
-sleep 6
-HEALTH=$(curl -s https://lunatarot.duckdns.org/actuator/health)
+# Spring boot start = 6-10 сек, ждём пока /actuator/health отвечает.
+HEALTH=""
+for _ in 1 2 3 4 5 6 7 8 9 10 11 12; do
+    sleep 1
+    HEALTH=$(curl -s --max-time 2 https://lunatarot.duckdns.org/actuator/health || true)
+    if [[ "$HEALTH" == *'"UP"'* ]]; then break; fi
+done
 BUNDLE=$(curl -s https://lunatarot.duckdns.org/app/ | grep -oE 'index-[A-Za-z0-9_-]+\.(js|css)' | sort -u | tr '\n' ' ')
 echo "  health: $HEALTH"
 echo "  bundle: $BUNDLE"

@@ -115,7 +115,7 @@ public class UpdateRouter {
 
     private void sendThankYou(long chatId, int stars) {
         String text = "✨ Луна получила твой свет\n\n"
-            + "Спасибо за " + stars + " звёзд — это очень помогает Зеркалу жить и расти.\n"
+            + "Спасибо за " + stars + " звёзд — это очень помогает Луне жить и расти.\n"
             + "Я рядом, когда снова понадоблюсь 🌙";
         try {
             telegramClient.execute(SendMessage.builder()

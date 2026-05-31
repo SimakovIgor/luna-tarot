@@ -3,9 +3,10 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Constellation } from '@/components/Constellation/Constellation';
 import { ZODIAC_INFO } from '@/zodiac';
-import { isInTelegram, shareViaTelegram, haptic } from '@/telegram/webapp';
+import { haptic } from '@/telegram/webapp';
 import { BOT_URL } from '@/config';
-import { track } from '@/observability';
+import { track, reportError } from '@/observability';
+import { generateSkyPostcard, sharePostcard } from '@/util/postcard';
 import type { MeResponse } from '@/api/me';
 import type { ZodiacSign } from '@/api/horoscope';
 import styles from './SkyShareSheet.module.css';
@@ -41,40 +42,33 @@ export function SkyShareSheet({ open, onClose, me, poeticLine }: SkyShareSheetPr
     haptic('medium');
     track('share_sky_clicked', { zodiac });
 
-    const text = `${poeticLine}\n\n— моё небо ☽ (узнай своё в @luna_taro_card_bot)`;
-
-    if (isInTelegram()) {
-      const ok = shareViaTelegram(text, BOT_URL);
-      if (ok) {
-        track('share_sky_completed', { zodiac, via: 'telegram' });
-        onClose();
+    const text = `${poeticLine}\n\n— моё небо ☽`;
+    try {
+      const blob = await generateSkyPostcard({
+        zodiac,
+        signLabel: info.sign,
+        name: me.name || '',
+        birthDate: me.birthDate,
+        poeticLine,
+      });
+      const result = await sharePostcard(blob, {
+        title: 'Luna · моё небо',
+        text,
+        url: BOT_URL,
+        fileName: 'luna-sky.png',
+      });
+      track('share_sky_completed', { zodiac, result });
+      if (result === 'downloaded') {
+        setError('открытка скачана');
       } else {
-        setError('Не удалось открыть share-диалог');
-      }
-    } else if (typeof navigator !== 'undefined' && 'share' in navigator) {
-      try {
-        await navigator.share({ title: 'Luna · моё небо', text, url: BOT_URL });
-        track('share_sky_completed', { zodiac, via: 'web' });
         onClose();
-      } catch {
-        // Юзер отменил
       }
-    } else {
-      // Fallback: копируем в буфер обмена.
-      const nav = navigator as Navigator & { clipboard?: { writeText: (s: string) => Promise<void> } };
-      if (nav.clipboard?.writeText) {
-        try {
-          await nav.clipboard.writeText(`${text}\n${BOT_URL}`);
-          setError('скопировано в буфер');
-          track('share_sky_completed', { zodiac, via: 'clipboard' });
-        } catch {
-          setError('Не удалось скопировать');
-        }
-      } else {
-        setError('Откройте через Telegram');
-      }
+    } catch (e) {
+      reportError(e, { where: 'SkyShareSheet.share', zodiac });
+      setError(e instanceof Error ? e.message : 'не вышло');
+    } finally {
+      setBusy(false);
     }
-    setBusy(false);
   };
 
   const content = (
@@ -156,7 +150,7 @@ interface SkyShareCardProps {
 
 /**
  * Открытка 320×569 — формат полного скрина для шеринга.
- * Внутри: лого Luna, метка «Зеркало Таро», созвездие, знак,
+ * Внутри: лого Luna, метка «Луна · Таро», созвездие, знак,
  * подпись «Небо {имя} · {дата}», поэтичная строка, CTA, ссылка на бот.
  */
 function SkyShareCard({ me, zodiac, signLabel, poeticLine }: SkyShareCardProps) {
@@ -168,7 +162,7 @@ function SkyShareCard({ me, zodiac, signLabel, poeticLine }: SkyShareCardProps) 
         className={styles.cardLogo}
         draggable={false}
       />
-      <span className={styles.cardLabel}>Зеркало Таро</span>
+      <span className={styles.cardLabel}>Луна · Таро</span>
 
       <div className={styles.cardDiscWrap}>
         <div className={styles.cardDisc}>

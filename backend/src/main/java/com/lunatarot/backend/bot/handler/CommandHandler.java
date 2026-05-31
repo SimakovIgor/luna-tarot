@@ -11,7 +11,7 @@ public class CommandHandler {
     private static final String HELP_TEXT =
         "🌙 Luna — ИИ-таролог.\n\n"
             + "Команды:\n"
-            + "/start — открыть Зеркало\n"
+            + "/start — открыть Луну\n"
             + "/help — эта справка\n\n"
             + "Всё происходит внутри Mini App: расклады, карта дня, совместимость, дневник.";
 

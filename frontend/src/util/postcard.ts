@@ -12,6 +12,8 @@
 import type { Reading } from '@/api/reading';
 import { cardImageUrl } from '@/api/reading';
 import { extractFirstSentence } from './text';
+import { CONSTELLATIONS } from '@/zodiac/constellations';
+import type { ZodiacSign } from '@/api/horoscope';
 
 const W = 1080;
 const H = 1350;
@@ -64,7 +66,7 @@ export async function generatePostcard(reading: Reading, positionLabels?: string
 
   ctx.font = '26px "Cinzel", serif';
   ctx.fillStyle = PALETTE.inkDim;
-  drawSpacedText(ctx, 'ЗЕРКАЛО ТАРО', W / 2, 290, 26, 8);
+  drawSpacedText(ctx, 'ЛУНА · ТАРО', W / 2, 290, 26, 8);
 
   drawOrnamentDivider(ctx, W / 2, 370, 260);
 
@@ -236,6 +238,221 @@ export async function generateCompatibilityPostcard(input: CompatibilityPostcard
   return canvasToBlob(canvas);
 }
 
+// ──────────────────────────────────────────────────────────────
+// Sky postcard — для шеринга «Твоего неба» из профиля.
+// ──────────────────────────────────────────────────────────────
+
+export interface SkyPostcardInput {
+  zodiac: ZodiacSign;
+  /** «Рыбы», «Овен», ... */
+  signLabel: string;
+  /** Имя пользователя для подписи «Небо {name}». */
+  name: string;
+  /** ISO yyyy-MM-dd. Если есть — подпись «· 16 марта 1995». */
+  birthDate?: string | null;
+  /** Поэтическая строка, которая показывается в карточке профиля. */
+  poeticLine: string;
+}
+
+/**
+ * PNG-открытка «Твоё небо» (1080×1350) для шеринга в TG/IG.
+ * Композиция повторяет SkyShareCard из ProfilePage:
+ * лого Luna + ЛУНА·ТАРО + круглый диск со зодиакальным кольцом
+ * и созвездием + знак + подпись + поэтичная строка + CTA + бот.
+ */
+export async function generateSkyPostcard(input: SkyPostcardInput): Promise<Blob> {
+  await waitForFonts();
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('No 2D context');
+
+  // Фон — тот же радиальный, что у других открыток.
+  const grad = ctx.createRadialGradient(W / 2, H * 0.2, 0, W / 2, H * 0.2, H * 0.9);
+  grad.addColorStop(0, PALETTE.bgTop);
+  grad.addColorStop(1, PALETTE.bgBottom);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+  drawStars(ctx);
+
+  // Лого Luna.
+  ctx.fillStyle = PALETTE.goldWarm;
+  ctx.font = '200px "UnifrakturMaguntia", serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.shadowColor = 'rgba(201,161,74,0.45)';
+  ctx.shadowBlur = 30;
+  ctx.fillText('Luna', W / 2, 90);
+  ctx.shadowBlur = 0;
+
+  ctx.font = '26px "Cinzel", serif';
+  ctx.fillStyle = PALETTE.inkDim;
+  drawSpacedText(ctx, 'ЛУНА · ТАРО', W / 2, 290, 26, 8);
+
+  drawOrnamentDivider(ctx, W / 2, 370, 260);
+
+  // Круглый диск со зодиакальным кольцом + созвездием.
+  const discCx = W / 2;
+  const discCy = 680;
+  const discR = 230;
+  drawSkyDisc(ctx, discCx, discCy, discR, input.zodiac);
+
+  // Название знака — Cormorant 70px.
+  ctx.fillStyle = PALETTE.goldWarm;
+  ctx.font = 'bold 76px "Cormorant Garamond", serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.shadowColor = 'rgba(201,161,74,0.45)';
+  ctx.shadowBlur = 22;
+  ctx.fillText(input.signLabel, W / 2, discCy + discR + 28);
+  ctx.shadowBlur = 0;
+
+  // Подпись «Небо Игоря · 16 марта 1995».
+  ctx.font = 'italic 30px "Cormorant Garamond", serif';
+  ctx.fillStyle = PALETTE.inkDim;
+  const birthSuffix = input.birthDate ? ' · ' + formatBirthRu(input.birthDate) : '';
+  ctx.fillText('Небо ' + (input.name || '—') + birthSuffix, W / 2, discCy + discR + 120);
+
+  // Поэтичная строка — крупная цитата.
+  const trimmedPoetic = input.poeticLine.length > 180
+    ? input.poeticLine.slice(0, 177).trimEnd() + '…'
+    : input.poeticLine;
+  ctx.font = '36px "Cormorant Garamond", serif';
+  ctx.fillStyle = PALETTE.goldWarm;
+  wrapText(ctx, '«' + trimmedPoetic + '»', W / 2, discCy + discR + 180, W - 160, 50);
+
+  // CTA + бот.
+  ctx.font = '26px "Cinzel", serif';
+  ctx.fillStyle = PALETTE.gold;
+  drawSpacedText(ctx, 'УЗНАТЬ СВОЁ НЕБО →', W / 2, H - 150, 26, 8);
+
+  ctx.font = '22px "Cinzel", serif';
+  ctx.fillStyle = PALETTE.goldDeep;
+  drawSpacedText(ctx, 'T.ME/LUNA_TARO_CARD_BOT', W / 2, H - 80, 22, 5);
+
+  return canvasToBlob(canvas);
+}
+
+/**
+ * Рисует круглый «диск неба»: тёмный фон, золотое кольцо + пунктир внутри,
+ * 12 спиц через 30°, в центре — созвездие знака.
+ */
+function drawSkyDisc(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  r: number,
+  zodiac: ZodiacSign,
+) {
+  ctx.save();
+  // Тёмный фон диска.
+  const dg = ctx.createRadialGradient(cx, cy - r * 0.1, 0, cx, cy, r);
+  dg.addColorStop(0, '#241a4e');
+  dg.addColorStop(0.55, '#140d30');
+  dg.addColorStop(1, '#0a0620');
+  ctx.fillStyle = dg;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fill();
+  // Бордер.
+  ctx.strokeStyle = 'rgba(217,184,120,0.4)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.stroke();
+  // Внутренний пунктирный круг.
+  ctx.setLineDash([5, 8]);
+  ctx.strokeStyle = 'rgba(217,184,120,0.4)';
+  ctx.beginPath();
+  ctx.arc(cx, cy, r - 16, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  // Очень тонкий внутренний кольцевой акцент.
+  ctx.strokeStyle = 'rgba(217,184,120,0.12)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r - 36, 0, Math.PI * 2);
+  ctx.stroke();
+  // 12 спиц от центра.
+  ctx.strokeStyle = 'rgba(217,184,120,0.18)';
+  ctx.lineWidth = 1;
+  const spokeLen = r * 0.78;
+  for (let i = 0; i < 12; i++) {
+    const a = (i * 30 - 90) * Math.PI / 180;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(a) * spokeLen, cy + Math.sin(a) * spokeLen);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // Созвездие в центре.
+  drawConstellation(ctx, cx, cy, r * 0.85, zodiac);
+}
+
+/**
+ * Рисует SVG-созвездие на canvas. Точки в системе 200×200 нормализуются
+ * к {@link sizePx} и центрируются на ({@link cx}, {@link cy}).
+ */
+function drawConstellation(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  sizePx: number,
+  zodiac: ZodiacSign,
+) {
+  const shape = CONSTELLATIONS[zodiac];
+  // 200×200 → sizePx, центр (100,100) на (cx,cy).
+  const k = sizePx / 200;
+  const tx = (x: number) => cx + (x - 100) * k;
+  const ty = (y: number) => cy + (y - 100) * k;
+
+  ctx.save();
+  // Рёбра.
+  ctx.strokeStyle = 'rgba(217,184,120,0.55)';
+  ctx.lineWidth = 1.6;
+  shape.edges.forEach(([a, b]) => {
+    const [x1, y1] = shape.nodes[a];
+    const [x2, y2] = shape.nodes[b];
+    ctx.beginPath();
+    ctx.moveTo(tx(x1), ty(y1));
+    ctx.lineTo(tx(x2), ty(y2));
+    ctx.stroke();
+  });
+  // Узлы — крупные точки с glow.
+  shape.nodes.forEach((p, i) => {
+    const radiusPx = (i % 3 === 0 ? 6 : 4) * (sizePx / 200);
+    ctx.beginPath();
+    ctx.fillStyle = '#f2dca0';
+    ctx.shadowColor = 'rgba(242,220,160,0.85)';
+    ctx.shadowBlur = 10;
+    ctx.arc(tx(p[0]), ty(p[1]), radiusPx, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    if (i % 4 === 0) {
+      ctx.strokeStyle = 'rgba(217,184,120,0.4)';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.arc(tx(p[0]), ty(p[1]), radiusPx * 2.5, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  });
+  ctx.restore();
+}
+
+const MONTHS_GENITIVE = [
+  'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+  'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря',
+];
+
+function formatBirthRu(iso: string): string {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  return `${d.getDate()} ${MONTHS_GENITIVE[d.getMonth()]} ${d.getFullYear()}`;
+}
+
 function drawZodiacRing(
   ctx: CanvasRenderingContext2D,
   cx: number,
@@ -356,7 +573,7 @@ export async function sharePostcard(
   // Склеиваем text + url в одну подпись. Передавать `url` отдельным полем
   // вместе с `files` — плохая идея: на iOS / в Telegram WebView приложение
   // часто берёт только что-то одно и в нашем случае съедало картинку.
-  const baseText = options.text ?? 'Заглянул в Зеркало Луны — вот что увидел.';
+  const baseText = options.text ?? 'Спросил у Луны — вот что она показала.';
   const fullText = options.url ? `${baseText}\n${options.url}` : baseText;
 
   // Главный путь: системный navigator.share с файлом. В свежем Telegram WebView

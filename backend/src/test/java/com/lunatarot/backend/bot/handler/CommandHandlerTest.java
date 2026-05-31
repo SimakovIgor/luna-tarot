@@ -20,7 +20,7 @@ class CommandHandlerTest extends BaseIT {
 
         assertThat(step.keyboard()).isEqualTo(OnboardingStep.Keyboard.MAIN_MENU);
         assertThat(step.attachments()).hasSize(1);
-        assertThat(step.message()).contains("Зеркало");
+        assertThat(step.message()).contains("Лун");
     }
 
     @Test
@@ -50,6 +50,6 @@ class CommandHandlerTest extends BaseIT {
         OnboardingStep step = commandHandler.handle("/unknown", TG_USER + 4).onlyStep();
 
         assertThat(step.keyboard()).isEqualTo(OnboardingStep.Keyboard.MAIN_MENU);
-        assertThat(step.message()).contains("Зеркало");
+        assertThat(step.message()).contains("Лун");
     }
 }

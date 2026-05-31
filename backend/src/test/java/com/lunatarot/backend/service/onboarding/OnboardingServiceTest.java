@@ -30,7 +30,7 @@ class OnboardingServiceTest extends BaseIT {
         assertThat(step.keyboard()).isEqualTo(OnboardingStep.Keyboard.MAIN_MENU);
         assertThat(step.attachments()).hasSize(1);
         assertThat(step.attachAsCaption()).isTrue();
-        assertThat(step.message()).contains("Зеркало");
+        assertThat(step.message()).contains("Лун");
 
         UserEntity user = userRepository.findByTgUserId(tg).orElseThrow();
         assertThat(user.getConversationState()).isEqualTo(BotConversationState.NEW);
@@ -55,7 +55,7 @@ class OnboardingServiceTest extends BaseIT {
 
         assertThat(step.keyboard()).isEqualTo(OnboardingStep.Keyboard.MAIN_MENU);
         assertThat(step.attachments()).hasSize(1);
-        assertThat(step.message()).contains("Зеркало");
+        assertThat(step.message()).contains("Лун");
     }
 
     private static long nextTg() {

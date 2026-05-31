@@ -230,7 +230,7 @@ export function HubPage({
             <SpreadRow
               icon="support"
               title="Поддержать Луну"
-              sub="звёзды для Зеркала"
+              sub="звёзды для Луны"
               warm
               onTap={() => setView({ name: 'support' })}
             />

@@ -101,6 +101,6 @@ public class DonationService {
     private static String donationDescription(int stars) {
         return "Свет твоих "
             + stars
-            + " звёзд хранит магию Зеркала. Луна благодарна каждой искре ✦";
+            + " звёзд хранит свет Луны. Она благодарна каждой искре ✦";
     }
 }
