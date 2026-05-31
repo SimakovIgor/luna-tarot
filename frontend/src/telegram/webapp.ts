@@ -13,6 +13,8 @@ interface TelegramWebApp {
       username?: string;
       language_code?: string;
     };
+    /** Параметр deeplink при открытии Mini App: ?startapp=compat_xxx. */
+    start_param?: string;
   };
   themeParams: Record<string, string>;
   colorScheme: 'light' | 'dark';
@@ -51,6 +53,20 @@ export function getInitData(): string {
 
 export function getTgUser(): TelegramWebApp['initDataUnsafe']['user'] | null {
   return getTelegramWebApp()?.initDataUnsafe?.user ?? null;
+}
+
+/**
+ * start_param из deeplink (?startapp=...). Возвращает только префикс-совпадение,
+ * чтобы не путать с другими возможными deeplink-сценариями.
+ *
+ * Пример: при открытии https://t.me/luna_taro_card_bot?startapp=compat_abc123
+ * вернёт "abc123" (с переданным prefix="compat_").
+ */
+export function getStartParam(prefix?: string): string | null {
+  const raw = getTelegramWebApp()?.initDataUnsafe?.start_param ?? null;
+  if (!raw) return null;
+  if (!prefix) return raw;
+  return raw.startsWith(prefix) ? raw.slice(prefix.length) : null;
 }
 
 export function ready(): void {

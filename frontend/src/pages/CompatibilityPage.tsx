@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ScreenContainer } from '@/components/ScreenContainer/ScreenContainer';
 import { OrnamentalDivider } from '@/components/OrnamentalDivider/OrnamentalDivider';
@@ -9,23 +9,57 @@ import { generateCompatibilityPostcard, sharePostcard } from '@/util/postcard';
 import { buildCompatibilityShareText } from '@/util/shareText';
 import { BOT_URL } from '@/config';
 import { extractFirstSentence } from '@/util/text';
-import { calculateCompatibility, type CompatibilityResponse } from '@/api/compatibility';
+import {
+  acceptCompatibilityInvite,
+  calculateCompatibility,
+  createCompatibilityInvite,
+  fetchCompatibilityInvite,
+  type CompatibilityInviteInfo,
+  type CompatibilityInviteResponse,
+  type CompatibilityResponse,
+} from '@/api/compatibility';
 import { ZODIAC_INFO } from '@/zodiac';
-import { haptic } from '@/telegram/webapp';
+import { haptic, isInTelegram, shareViaTelegram } from '@/telegram/webapp';
 import styles from './CompatibilityPage.module.css';
 
 interface CompatibilityPageProps {
   onClose: () => void;
+  /** Если задан — открываем сразу в режиме invitee для этого slug. */
+  pendingInviteSlug?: string | null;
 }
 
-type Stage = 'form' | 'loading' | 'result';
+type Stage =
+  | 'form'           // solo: ввод имени/ДР партнёра
+  | 'invite-create'  // инициатор: жми «Создать ссылку»
+  | 'invite-sent'    // инициатор: ссылка готова — поделиться
+  | 'invitee'        // friend: видит «{Имя} зовёт» + кнопка принять
+  | 'loading'        // общий: «Луна сверяет»
+  | 'result';        // общий: показ результата
 
-export function CompatibilityPage({ onClose }: CompatibilityPageProps) {
-  const [stage, setStage] = useState<Stage>('form');
+export function CompatibilityPage({ onClose, pendingInviteSlug }: CompatibilityPageProps) {
+  const [stage, setStage] = useState<Stage>(pendingInviteSlug ? 'invitee' : 'form');
   const [partnerName, setPartnerName] = useState('');
   const [partnerDate, setPartnerDate] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<CompatibilityResponse | null>(null);
+  const [invite, setInvite] = useState<CompatibilityInviteResponse | null>(null);
+  const [inviteInfo, setInviteInfo] = useState<CompatibilityInviteInfo | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
+
+  // Friend-режим: подгружаем инфо о приглашении (имя инициатора, его знак).
+  useEffect(() => {
+    if (!pendingInviteSlug) return;
+    let alive = true;
+    fetchCompatibilityInvite(pendingInviteSlug)
+      .then((info) => { if (alive) setInviteInfo(info); })
+      .catch((e) => {
+        if (alive) {
+          setError(e instanceof Error ? e.message : 'Приглашение не найдено');
+          setStage('form');
+        }
+      });
+    return () => { alive = false; };
+  }, [pendingInviteSlug]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -68,7 +102,80 @@ export function CompatibilityPage({ onClose }: CompatibilityPageProps) {
     setPartnerName('');
     setPartnerDate('');
     setError(null);
+    setInvite(null);
+    setInviteInfo(null);
+    setLinkCopied(false);
     setStage('form');
+  };
+
+  const handleCreateInvite = async () => {
+    setError(null);
+    setStage('invite-create');
+    haptic('light');
+    try {
+      const created = await createCompatibilityInvite();
+      setInvite(created);
+      setStage('invite-sent');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'не удалось создать ссылку');
+      setStage('form');
+    }
+  };
+
+  const handleShareInvite = () => {
+    if (!invite) return;
+    haptic('medium');
+    const text = 'Пойдём, спросим у Луны? Открой ссылку — Луна посчитает нашу совместимость.';
+    const nav = navigator as Navigator & {
+      share?: (data: { title?: string; text?: string; url?: string }) => Promise<void>;
+      clipboard?: { writeText: (s: string) => Promise<void> };
+    };
+    if (isInTelegram() && shareViaTelegram(text, invite.shareUrl)) {
+      // native share открыт
+    } else if (nav.share) {
+      nav.share({ title: 'Luna · совместимость', text, url: invite.shareUrl }).catch(() => {});
+    } else if (nav.clipboard) {
+      nav.clipboard.writeText(invite.shareUrl).then(
+        () => setLinkCopied(true),
+        () => setError('Не удалось скопировать'),
+      );
+    } else {
+      setError('Скопируй ссылку вручную');
+    }
+  };
+
+  const handleCopyInvite = async () => {
+    if (!invite) return;
+    haptic('light');
+    const nav = navigator as Navigator & {
+      clipboard?: { writeText: (s: string) => Promise<void> };
+    };
+    if (!nav.clipboard) {
+      setError('Скопируй ссылку вручную');
+      return;
+    }
+    try {
+      await nav.clipboard.writeText(invite.shareUrl);
+      setLinkCopied(true);
+      window.setTimeout(() => setLinkCopied(false), 2000);
+    } catch {
+      setError('Не удалось скопировать');
+    }
+  };
+
+  const handleAcceptInvite = async () => {
+    if (!pendingInviteSlug) return;
+    setError(null);
+    setStage('loading');
+    haptic('medium');
+    try {
+      const res = await acceptCompatibilityInvite(pendingInviteSlug);
+      setResult(res);
+      setStage('result');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'не вышло');
+      setStage('invitee');
+    }
   };
 
   return (
@@ -129,7 +236,110 @@ export function CompatibilityPage({ onClose }: CompatibilityPageProps) {
                 >
                   Спросить Луну
                 </GoldButton>
+                <button
+                  type="button"
+                  className={styles.inviteLink}
+                  onClick={handleCreateInvite}
+                >
+                  Или позвать самого человека →
+                </button>
               </div>
+            </motion.div>
+          )}
+
+          {stage === 'invite-create' && (
+            <motion.div
+              key="invite-create"
+              className={styles.loadingStage}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.4 }}
+            >
+              <div className={styles.waitingMoon} />
+              <div className={styles.waitingCaption}>Луна готовит ссылку…</div>
+            </motion.div>
+          )}
+
+          {stage === 'invite-sent' && invite && (
+            <motion.div
+              key="invite-sent"
+              className={styles.formStage}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.5 }}
+            >
+              <OrnamentalDivider label="ссылка готова" />
+              <p className={styles.subtitle}>
+                отправь её другу. Когда он откроет — Луна сверит ваши энергии,
+                а результат увидите оба.
+              </p>
+
+              <div className={styles.inviteLinkBox}>
+                <code className={styles.inviteUrl}>{invite.shareUrl}</code>
+              </div>
+
+              {error && <p className={styles.error}>{error}</p>}
+
+              <div className={styles.formActions}>
+                <GoldButton full onClick={handleShareInvite}>
+                  Поделиться в Telegram
+                </GoldButton>
+                <button
+                  type="button"
+                  className={styles.inviteLink}
+                  onClick={handleCopyInvite}
+                >
+                  {linkCopied ? '✓ ссылка скопирована' : 'Скопировать ссылку'}
+                </button>
+                <button
+                  type="button"
+                  className={styles.inviteSecondary}
+                  onClick={resetForNew}
+                >
+                  ← назад к форме
+                </button>
+              </div>
+            </motion.div>
+          )}
+
+          {stage === 'invitee' && (
+            <motion.div
+              key="invitee"
+              className={styles.formStage}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.5 }}
+            >
+              <OrnamentalDivider label="приглашение" />
+              {inviteInfo ? (
+                <>
+                  <p className={styles.subtitle}>
+                    <strong className={styles.inviterName}>{inviteInfo.initiatorName}</strong>
+                    {' '}зовёт тебя в Зеркало. Луна посмотрит, что между вами.
+                  </p>
+                  {error && <p className={styles.error}>{error}</p>}
+                  <div className={styles.formActions}>
+                    <GoldButton full onClick={handleAcceptInvite}>
+                      Войти и сравнить
+                    </GoldButton>
+                    <button
+                      type="button"
+                      className={styles.inviteLink}
+                      onClick={onClose}
+                    >
+                      В другой раз
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className={styles.loadingStage}>
+                  <div className={styles.waitingMoon} />
+                  <div className={styles.waitingCaption}>загружаю приглашение…</div>
+                </div>
+              )}
             </motion.div>
           )}
 

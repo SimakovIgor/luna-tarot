@@ -37,3 +37,33 @@ export interface CompatibilityHistoryItem {
 export function fetchCompatibilityHistory(): Promise<CompatibilityHistoryItem[]> {
   return api<CompatibilityHistoryItem[]>('/compatibility/history');
 }
+
+// ── Invite-flow ──────────────────────────────────────────────
+
+export interface CompatibilityInviteResponse {
+  slug: string;
+  shareUrl: string;
+}
+
+export interface CompatibilityInviteInfo {
+  slug: string;
+  initiatorName: string;
+  initiatorZodiac: ZodiacSign;
+  /** «PENDING_INVITE» | «COMPLETED». */
+  status: string;
+}
+
+/** Инициатор: создать invite-ссылку. */
+export function createCompatibilityInvite(): Promise<CompatibilityInviteResponse> {
+  return api<CompatibilityInviteResponse>('/compatibility/invite', { method: 'POST' });
+}
+
+/** Friend: посмотреть инфу о приглашении (для экрана с именем инициатора). */
+export function fetchCompatibilityInvite(slug: string): Promise<CompatibilityInviteInfo> {
+  return api<CompatibilityInviteInfo>(`/compatibility/invite/${slug}`);
+}
+
+/** Friend: принять приглашение, получить совместный результат. */
+export function acceptCompatibilityInvite(slug: string): Promise<CompatibilityResponse> {
+  return api<CompatibilityResponse>(`/compatibility/invite/${slug}/accept`, { method: 'POST' });
+}

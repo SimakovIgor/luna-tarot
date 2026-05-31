@@ -29,6 +29,12 @@ interface HubPageProps {
   onSubViewChange?: (view: 'hub' | 'other') => void;
   /** Общий со StarField ref скорости звёзд (0=splash, 1=home). */
   calmRef: MutableRefObject<number>;
+  /**
+   * Если приложение открыли по invite-deeplink (?startapp=compat_xxx),
+   * App вытаскивает slug и передаёт сюда — Hub сразу переключается на
+   * Compatibility-view в режиме invitee.
+   */
+  initialCompatInviteSlug?: string | null;
 }
 
 type View =
@@ -37,7 +43,7 @@ type View =
   | { name: 'card-of-day' }
   | { name: 'diary' }
   | { name: 'profile' }
-  | { name: 'compatibility' }
+  | { name: 'compatibility'; inviteSlug?: string }
   | { name: 'support' };
 
 /** Карта SpreadId → ключ SVG-иконки (раскладка-схема для SpreadIcon). */
@@ -60,8 +66,13 @@ export function HubPage({
   reveal = true,
   onSubViewChange,
   calmRef,
+  initialCompatInviteSlug,
 }: HubPageProps) {
-  const [view, setView] = useState<View>({ name: 'hub' });
+  const [view, setView] = useState<View>(
+    initialCompatInviteSlug
+      ? { name: 'compatibility', inviteSlug: initialCompatInviteSlug }
+      : { name: 'hub' },
+  );
 
   // Сообщаем App про смену под-экрана — чтобы DayCard скрывалась когда мы не на хабе.
   useEffect(() => {
@@ -90,7 +101,12 @@ export function HubPage({
     );
   }
   if (view.name === 'compatibility') {
-    return <CompatibilityPage onClose={() => setView({ name: 'hub' })} />;
+    return (
+      <CompatibilityPage
+        onClose={() => setView({ name: 'hub' })}
+        pendingInviteSlug={view.inviteSlug}
+      />
+    );
   }
   if (view.name === 'support') {
     return (

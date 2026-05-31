@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type MutableRefObject } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { getInitData, getTgUser, ready as tgReady } from './telegram/webapp';
+import { getInitData, getTgUser, getStartParam, ready as tgReady } from './telegram/webapp';
 import { loginWithTgInit } from './api/auth';
 import { fetchMe, type MeResponse } from './api/me';
 import { DesignReviewPage, OnboardingDemoPage, ReadingDemoPage, DiaryDemoPage } from './pages/DesignReviewPage';
@@ -205,6 +205,10 @@ function renderBody(
   if (state.me.conversationState !== 'READY') {
     return <OnboardingPage onComplete={onMeUpdated} />;
   }
+  // Если Mini App открыли по invite-deeplink (?startapp=compat_xxx),
+  // забираем slug и передаём в Hub — он сразу откроет CompatibilityPage
+  // в режиме invitee.
+  const compatInviteSlug = getStartParam('compat_');
   return (
     <HubPage
       me={state.me}
@@ -217,6 +221,7 @@ function renderBody(
       reveal={body.reveal}
       onSubViewChange={body.onSubViewChange}
       calmRef={body.calmRef}
+      initialCompatInviteSlug={compatInviteSlug}
     />
   );
 }
