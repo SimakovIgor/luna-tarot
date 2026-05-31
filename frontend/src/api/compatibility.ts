@@ -19,3 +19,21 @@ export interface CompatibilityResponse {
 export function calculateCompatibility(body: CompatibilityRequest): Promise<CompatibilityResponse> {
   return api<CompatibilityResponse>('/compatibility', { method: 'POST', body });
 }
+
+/** Запись истории совместимости в Дневнике. */
+export interface CompatibilityHistoryItem {
+  id: number;
+  /** «INITIATOR» — я её запустил, «PARTNER» — меня пригласили. */
+  role: 'INITIATOR' | 'PARTNER';
+  partnerName: string;
+  myZodiac: ZodiacSign;
+  partnerZodiac: ZodiacSign;
+  score: number;
+  text: string;
+  /** ISO timestamp. */
+  createdAt: string;
+}
+
+export function fetchCompatibilityHistory(): Promise<CompatibilityHistoryItem[]> {
+  return api<CompatibilityHistoryItem[]>('/compatibility/history');
+}

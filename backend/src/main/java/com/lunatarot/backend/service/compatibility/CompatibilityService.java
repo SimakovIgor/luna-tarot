@@ -1,18 +1,24 @@
 package com.lunatarot.backend.service.compatibility;
 
+import com.lunatarot.backend.domain.model.CompatibilityCheckEntity;
+import com.lunatarot.backend.domain.model.enums.CompatibilityStatus;
 import com.lunatarot.backend.domain.model.enums.ZodiacSign;
+import com.lunatarot.backend.domain.repository.CompatibilityCheckRepository;
 import com.lunatarot.backend.service.EsotericProfile;
 import com.lunatarot.backend.service.EsotericProfileCalculator;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.Period;
 import java.time.ZoneOffset;
+import java.util.List;
 
 /**
- * Рассчитывает совместимость: высчитывает знак партнёра по ДР, дёргает генератор.
- * Без persistence (это разовая фича, не идёт в дневник).
+ * Рассчитывает совместимость и сохраняет результат как запись в Дневник.
+ * Поддерживает solo-режим (имя+ДР партнёра вручную) и invite-flow
+ * (друг входит по ссылке — добавит в Этапе 2).
  */
 @Service
 public class CompatibilityService {
@@ -21,19 +27,28 @@ public class CompatibilityService {
     static final int MIN_ADULT_AGE = 16;
     private static final int MIN_NAME = 1;
     private static final int MAX_NAME = 64;
+    private static final int HISTORY_LIMIT = 50;
 
     private final EsotericProfileCalculator calculator;
     private final CompatibilityGenerator generator;
+    private final CompatibilityCheckRepository repository;
     private final Clock clock;
 
     public CompatibilityService(EsotericProfileCalculator calculator,
                                 CompatibilityGenerator generator,
+                                CompatibilityCheckRepository repository,
                                 Clock clock) {
         this.calculator = calculator;
         this.generator = generator;
+        this.repository = repository;
         this.clock = clock;
     }
 
+    /**
+     * Solo-режим: получаем результат + СРАЗУ сохраняем как COMPLETED-запись
+     * в Дневник инициатора.
+     */
+    @Transactional
     public CompatibilityResult calculate(CompatibilityRequest request) {
         validate(request);
         Integer partnerAge = ageFrom(request.partnerBirthDate());
@@ -60,9 +75,27 @@ public class CompatibilityService {
             request.me().getName(), myZodiac, myAge,
             partnerName, partnerProfile.zodiac(), partnerAge
         );
+        // Сохраняем запись для Дневника. partner_user_id=NULL — solo-режим.
+        CompatibilityCheckEntity entity = CompatibilityCheckEntity.builder()
+            .initiatorUserId(request.me().getId())
+            .partnerUserId(null)
+            .partnerName(partnerName)
+            .partnerBirthDate(request.partnerBirthDate())
+            .initiatorZodiac(myZodiac)
+            .partnerZodiac(partnerProfile.zodiac())
+            .score(output.score())
+            .resultText(output.text())
+            .status(CompatibilityStatus.COMPLETED)
+            .build();
+        repository.save(entity);
         return new CompatibilityResult(
             myZodiac, partnerProfile.zodiac(), partnerName, output.score(), output.text()
         );
+    }
+
+    /** История совместимостей юзера (инициированные им + те, куда его пригласили). */
+    public List<CompatibilityCheckEntity> historyFor(long userId) {
+        return repository.findHistoryByUser(userId, HISTORY_LIMIT);
     }
 
     private Integer ageFrom(LocalDate birthDate) {

@@ -15,6 +15,11 @@ import {
   type ReadingOutcome,
   type ReadingType,
 } from '@/api/reading';
+import {
+  fetchCompatibilityHistory,
+  type CompatibilityHistoryItem,
+} from '@/api/compatibility';
+import { ZODIAC_INFO } from '@/zodiac';
 import { haptic } from '@/telegram/webapp';
 import { SPREADS, type SpreadId } from '@/spreads/catalog';
 import { FinalLayout } from '@/spreads/FinalLayout';
@@ -28,22 +33,46 @@ interface OutcomeTarget {
   reading: Reading;
 }
 
+/**
+ * В Дневнике смешиваем расклады и совместимости в общую timeline по дате.
+ * Дискриминатор `kind` отличает их при рендере карточки.
+ */
+type DiaryItem =
+  | { kind: 'reading'; data: Reading; createdAt: string }
+  | { kind: 'compat'; data: CompatibilityHistoryItem; createdAt: string };
+
 export function DiaryPage({ onClose }: DiaryPageProps) {
-  const [items, setItems] = useState<Reading[] | null>(null);
+  const [items, setItems] = useState<DiaryItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [outcomeTarget, setOutcomeTarget] = useState<OutcomeTarget | null>(null);
 
   useEffect(() => {
     let alive = true;
-    fetchHistory(30)
-      .then((list) => { if (alive) setItems(list); })
+    // Тянем обе истории параллельно, склеиваем по дате. Если один из запросов
+    // провалится — показываем то, что есть; ошибку логируем во второй ставке.
+    Promise.all([
+      fetchHistory(30).catch(() => [] as Reading[]),
+      fetchCompatibilityHistory().catch(() => [] as CompatibilityHistoryItem[]),
+    ])
+      .then(([readings, compats]) => {
+        if (!alive) return;
+        const all: DiaryItem[] = [
+          ...readings.map((r) => ({ kind: 'reading' as const, data: r, createdAt: r.createdAt })),
+          ...compats.map((c) => ({ kind: 'compat' as const, data: c, createdAt: c.createdAt })),
+        ].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+        setItems(all);
+      })
       .catch((e) => { if (alive) setError(e instanceof Error ? e.message : 'error'); });
     return () => { alive = false; };
   }, []);
 
-  const replaceItem = (updated: Reading) => {
-    setItems((prev) => prev?.map((r) => (r.id === updated.id ? updated : r)) ?? prev);
+  const replaceReading = (updated: Reading) => {
+    setItems((prev) => prev?.map((it) =>
+      it.kind === 'reading' && it.data.id === updated.id
+        ? { ...it, data: updated }
+        : it,
+    ) ?? prev);
   };
 
   return (
@@ -77,22 +106,37 @@ export function DiaryPage({ onClose }: DiaryPageProps) {
             </div>
           ) : (
             <div className={styles.timeline}>
-              {items.map((r, idx) => (
-                <DiaryEntry
-                  key={r.id}
-                  reading={r}
-                  index={idx}
-                  expanded={expandedId === r.id}
-                  onToggle={() => {
-                    haptic('light');
-                    setExpandedId(expandedId === r.id ? null : r.id);
-                  }}
-                  onOpenOutcome={() => {
-                    haptic('light');
-                    setOutcomeTarget({ reading: r });
-                  }}
-                />
-              ))}
+              {items.map((it, idx) => {
+                const key = it.kind + '-' + it.data.id;
+                const expanded = expandedId === key;
+                const onToggle = () => {
+                  haptic('light');
+                  setExpandedId(expanded ? null : key);
+                };
+                if (it.kind === 'reading') {
+                  return (
+                    <DiaryEntry
+                      key={key}
+                      reading={it.data}
+                      index={idx}
+                      expanded={expanded}
+                      onToggle={onToggle}
+                      onOpenOutcome={() => {
+                        haptic('light');
+                        setOutcomeTarget({ reading: it.data });
+                      }}
+                    />
+                  );
+                }
+                return (
+                  <CompatDiaryEntry
+                    key={key}
+                    item={it.data}
+                    expanded={expanded}
+                    onToggle={onToggle}
+                  />
+                );
+              })}
             </div>
           )}
         </div>
@@ -107,12 +151,12 @@ export function DiaryPage({ onClose }: DiaryPageProps) {
         onSubmit={async (status, note) => {
           if (!outcomeTarget) return;
           const updated = await recordOutcome(outcomeTarget.reading.id, status, note ?? undefined);
-          replaceItem(updated);
+          replaceReading(updated);
         }}
         onClear={async () => {
           if (!outcomeTarget) return;
           const updated = await clearOutcome(outcomeTarget.reading.id);
-          replaceItem(updated);
+          replaceReading(updated);
         }}
       />
     </ScreenContainer>
@@ -344,4 +388,53 @@ function formatDateRu(d: Date): string {
   if (sameDay(d, today)) return 'сегодня';
   if (sameDay(d, yesterday)) return 'вчера';
   return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+}
+
+// ── CompatDiaryEntry ────────────────────────────────────────
+// Карточка совместимости в Дневнике. Header: «с {имя} · {date}»,
+// два знака с символами + % резонанса справа. По клику — раскрывается
+// полный текст разбора.
+
+interface CompatDiaryEntryProps {
+  item: CompatibilityHistoryItem;
+  expanded: boolean;
+  onToggle: () => void;
+}
+
+function CompatDiaryEntry({ item, expanded, onToggle }: CompatDiaryEntryProps) {
+  const me = ZODIAC_INFO[item.myZodiac];
+  const partner = ZODIAC_INFO[item.partnerZodiac];
+  const headline = item.role === 'INITIATOR'
+    ? `с ${item.partnerName}`
+    : `${item.partnerName} пригласил${item.partnerName.endsWith('а') ? 'а' : ''}`;
+  const dateLabel = formatDateRu(new Date(item.createdAt));
+  return (
+    <button
+      type="button"
+      className={`${styles.entry} ${expanded ? styles.entryOpen : ''}`}
+      onClick={onToggle}
+    >
+      <div className={styles.entryHead}>
+        <span className={styles.entryDate}>{dateLabel}</span>
+        <span className={styles.entryTitle}>совместимость · {headline}</span>
+      </div>
+      <div className={styles.compatRow}>
+        <span className={styles.compatSign}>
+          <span className={styles.compatGlyph}>{me.symbol}</span>
+          {me.sign}
+        </span>
+        <span className={styles.compatLink}>✦</span>
+        <span className={styles.compatSign}>
+          <span className={styles.compatGlyph}>{partner.symbol}</span>
+          {partner.sign}
+        </span>
+        <span className={styles.compatScore}>{item.score}%</span>
+      </div>
+      {expanded && (
+        <div className={styles.compatText}>
+          {item.text}
+        </div>
+      )}
+    </button>
+  );
 }

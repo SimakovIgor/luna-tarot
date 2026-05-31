@@ -314,3 +314,58 @@
 }
 
 /* Лоадер вынесен в общий <OrbitalLoader>. */
+
+/* ── Compatibility в Дневнике ── */
+.entryOpen { border-color: var(--gold) !important; }
+.entryTitle {
+  font-family: var(--font-display);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  color: var(--gold-dim);
+  text-transform: lowercase;
+}
+.compatRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+  padding: 10px 0 0;
+}
+.compatSign {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-display);
+  font-size: 14px;
+  color: var(--ink);
+}
+.compatGlyph {
+  color: var(--gold-hi);
+  font-size: 18px;
+  line-height: 1;
+}
+.compatLink {
+  color: var(--gold);
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.compatScore {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--gold-hi);
+  letter-spacing: 0.02em;
+  margin-left: auto;
+}
+.compatText {
+  margin-top: 12px;
+  padding: 14px 0 4px;
+  border-top: 1px dashed var(--gold-faint);
+  font-family: var(--font-display);
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink);
+  white-space: pre-wrap;
+  text-align: left;
+}
