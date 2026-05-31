@@ -199,6 +199,24 @@ public class CompatibilityService {
         return repository.findPendingByInitiator(userId);
     }
 
+    /**
+     * Удалить своё pending-приглашение (если друг так и не открыл и оно
+     * больше не нужно). Только PENDING_INVITE — completed-записи через
+     * этот метод не удаляются.
+     */
+    @Transactional
+    public void cancelInvite(String slug, long initiatorUserId) {
+        CompatibilityCheckEntity entity = repository.findByInviteSlug(slug)
+            .orElseThrow(() -> new IllegalArgumentException("Приглашение не найдено"));
+        if (entity.getStatus() != CompatibilityStatus.PENDING_INVITE) {
+            throw new IllegalArgumentException("Это приглашение уже принято — удалить нельзя");
+        }
+        if (!entity.getInitiatorUserId().equals(initiatorUserId)) {
+            throw new IllegalArgumentException("Это не твоё приглашение");
+        }
+        repository.delete(entity);
+    }
+
     /** Telegram-ссылка вида https://t.me/{bot}?startapp=compat_{slug}. */
     public String buildShareUrl(String slug) {
         String bot = telegramProperties.botUsername();

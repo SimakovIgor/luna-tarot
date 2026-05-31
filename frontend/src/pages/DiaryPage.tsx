@@ -16,6 +16,7 @@ import {
   type ReadingType,
 } from '@/api/reading';
 import {
+  cancelCompatibilityInvite,
   fetchCompatibilityHistory,
   fetchCompatibilityPending,
   type CompatibilityHistoryItem,
@@ -136,6 +137,15 @@ export function DiaryPage({ onClose }: DiaryPageProps) {
                           } else if (nav.clipboard) {
                             nav.clipboard.writeText(p.shareUrl).catch(() => {});
                           }
+                        }
+                      }}
+                      onCancel={async () => {
+                        haptic('medium');
+                        try {
+                          await cancelCompatibilityInvite(p.slug);
+                          setPending((prev) => prev.filter((x) => x.slug !== p.slug));
+                        } catch (e) {
+                          setError(e instanceof Error ? e.message : 'не вышло');
                         }
                       }}
                     />
@@ -449,24 +459,31 @@ function CompatDiaryEntry({ item, expanded, onToggle }: CompatDiaryEntryProps) {
   return (
     <button
       type="button"
-      className={`${styles.entry} ${expanded ? styles.entryOpen : ''}`}
+      className={`${styles.compatEntry} ${expanded ? styles.compatEntryOpen : ''}`}
       onClick={onToggle}
     >
-      <div className={styles.entryHead}>
+      <div className={styles.compatHeadRow}>
         <span className={styles.entryDate}>{dateLabel}</span>
-        <span className={styles.entryTitle}>совместимость · {headline}</span>
+        <span className={styles.compatRoleBadge}>
+          {item.role === 'INITIATOR' ? 'ты' : 'тебя позвали'}
+        </span>
       </div>
-      <div className={styles.compatRow}>
-        <span className={styles.compatSign}>
+      <div className={styles.compatBody}>
+        <div className={styles.compatSignBlock}>
           <span className={styles.compatGlyph}>{me.symbol}</span>
-          {me.sign}
-        </span>
-        <span className={styles.compatLink}>✦</span>
-        <span className={styles.compatSign}>
+          <span className={styles.compatSignName}>{me.sign}</span>
+        </div>
+        <div className={styles.compatLinkLine} aria-hidden="true">
+          <span className={styles.compatSpark}>✦</span>
+        </div>
+        <div className={styles.compatSignBlock}>
           <span className={styles.compatGlyph}>{partner.symbol}</span>
-          {partner.sign}
-        </span>
-        <span className={styles.compatScore}>{item.score}%</span>
+          <span className={styles.compatSignName}>{partner.sign}</span>
+        </div>
+      </div>
+      <div className={styles.compatFoot}>
+        <span className={styles.compatHeadline}>{headline}</span>
+        <span className={styles.compatScoreBig}>{item.score}<span className={styles.compatScorePct}>%</span></span>
       </div>
       {expanded && (
         <div className={styles.compatText}>
@@ -485,9 +502,10 @@ function CompatDiaryEntry({ item, expanded, onToggle }: CompatDiaryEntryProps) {
 interface PendingInviteCardProps {
   item: CompatibilityPendingItem;
   onShare: () => void;
+  onCancel: () => void;
 }
 
-function PendingInviteCard({ item, onShare }: PendingInviteCardProps) {
+function PendingInviteCard({ item, onShare, onCancel }: PendingInviteCardProps) {
   const dateLabel = formatDateRu(new Date(item.createdAt));
   return (
     <div className={styles.pendingCard}>
@@ -496,9 +514,14 @@ function PendingInviteCard({ item, onShare }: PendingInviteCardProps) {
         <span className={styles.pendingTitle}>приглашение · ждёт</span>
       </div>
       <code className={styles.pendingUrl}>{item.shareUrl.replace('https://', '')}</code>
-      <button type="button" className={styles.pendingShareBtn} onClick={onShare}>
-        ↗ переотправить
-      </button>
+      <div className={styles.pendingActions}>
+        <button type="button" className={styles.pendingShareBtn} onClick={onShare}>
+          ↗ переотправить
+        </button>
+        <button type="button" className={styles.pendingCancelBtn} onClick={onCancel}>
+          удалить
+        </button>
+      </div>
     </div>
   );
 }

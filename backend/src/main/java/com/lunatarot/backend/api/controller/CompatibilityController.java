@@ -16,6 +16,7 @@ import com.lunatarot.backend.service.compatibility.CompatibilityService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -106,6 +107,18 @@ public class CompatibilityController {
                 c.getCreatedAt()
             ))
             .toList();
+    }
+
+    /** Инициатор удаляет своё pending-приглашение (если друг так и не открыл). */
+    @DeleteMapping("/invite/{slug}")
+    public ResponseEntity<Void> cancelInvite(HttpServletRequest request, @PathVariable String slug) {
+        UserEntity me = currentUser(request);
+        try {
+            compatibilityService.cancelInvite(slug, me.getId());
+            return ResponseEntity.noContent().build();
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(BAD_REQUEST, e.getMessage(), e);
+        }
     }
 
     /** Friend перешёл по ссылке — отдаём инфо о приглашении (имя инициатора, его знак). */

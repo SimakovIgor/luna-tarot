@@ -81,3 +81,8 @@ export interface CompatibilityPendingItem {
 export function fetchCompatibilityPending(): Promise<CompatibilityPendingItem[]> {
   return api<CompatibilityPendingItem[]>('/compatibility/pending');
 }
+
+/** Инициатор отменяет (удаляет) своё pending-приглашение. */
+export function cancelCompatibilityInvite(slug: string): Promise<void> {
+  return api<void>(`/compatibility/invite/${slug}`, { method: 'DELETE' });
+}
