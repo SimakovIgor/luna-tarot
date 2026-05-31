@@ -20,7 +20,12 @@
   flex-direction: column;
   font-family: "Cormorant Garamond", Georgia, serif;
   font-style: normal;
-  padding-bottom: 24px;
+  /* Единый стандарт ширины контента — совпадает с HubPage. */
+  width: 100%;
+  max-width: var(--page-max-width);
+  margin: 0 auto;
+  padding: 0 var(--page-padding-x) 24px;
+  box-sizing: border-box;
 }
 
 /* ── Top bar ─────────────────────────────────────────────── */

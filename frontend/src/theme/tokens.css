@@ -59,6 +59,14 @@
   --kicker-size: 9.5px;
   --kicker-tracking: 0.28em;
 
+  /* ── Page layout ────────────────────────────────────────
+     Единый стандарт ширины и горизонтальных отступов для контента
+     всех страниц. ScreenContainer сам width 100% (чтобы StarField был
+     до краёв), а каждая страница оборачивает свой контент в блок
+     max-width: var(--page-max-width); margin: 0 auto; padding: 0 var(--page-padding-x). */
+  --page-max-width: 414px;
+  --page-padding-x: 18px;
+
   /* Координаты «дневной карты» — общие для splash и hub.
      Любой компонент, рендерящий day-card, использует эти переменные,
      чтобы splash приземлялся ровно в позицию hub day-card. */

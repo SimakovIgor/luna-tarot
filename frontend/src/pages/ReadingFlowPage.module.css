@@ -4,6 +4,12 @@
   flex-direction: column;
   position: relative;
   z-index: 2;
+  /* Единый стандарт ширины контента — совпадает с HubPage / ProfilePage. */
+  width: 100%;
+  max-width: var(--page-max-width);
+  margin: 0 auto;
+  padding: 0 var(--page-padding-x);
+  box-sizing: border-box;
 }
 
 .topbar {

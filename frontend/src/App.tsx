@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type MutableRefObject } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { getInitData, getTgUser, ready as tgReady } from './telegram/webapp';
 import { loginWithTgInit } from './api/auth';
 import { fetchMe, type MeResponse } from './api/me';
@@ -128,18 +129,46 @@ export function App() {
           onDone={() => setSplashGone(true)}
         />
       )}
-      {renderBody(state, (me) => setState({ kind: 'ready', me }), {
-        cardOfDay,
-        dayFlipped,
-        onDayFlip: setDayFlipped,
-        reveal: splashGone,
-        onSubViewChange: setActiveSubView,
-        horoscope,
-        horoscopeError,
-        calmRef,
-      })}
+      {/* Fade между состояниями (loading → onboarding → hub) — без скачка.
+          Wrapper position:absolute inset:0 — каждый state занимает весь
+          экран, AnimatePresence плавно меняет их по opacity. */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={bodyKey(state)}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.4, ease: [0.22, 0.85, 0.3, 1] }}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          {renderBody(state, (me) => setState({ kind: 'ready', me }), {
+            cardOfDay,
+            dayFlipped,
+            onDayFlip: setDayFlipped,
+            reveal: splashGone,
+            onSubViewChange: setActiveSubView,
+            horoscope,
+            horoscopeError,
+            calmRef,
+          })}
+        </motion.div>
+      </AnimatePresence>
     </>
   );
+}
+
+/** Стабильный ключ для AnimatePresence: одно состояние = один key, без re-mount при me-update. */
+function bodyKey(state: AppState): string {
+  if (state.kind === 'ready') {
+    return state.me.conversationState === 'READY' ? 'hub' : 'onboarding';
+  }
+  return state.kind;
 }
 
 interface BodyProps {

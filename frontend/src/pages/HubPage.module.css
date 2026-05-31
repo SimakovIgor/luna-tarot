@@ -13,13 +13,16 @@
   /* Фон не ставим — StarField (App-level) рисует звёзды на весь viewport. */
 }
 
-/* Контент-колонка, padding 18px по краям. */
+/* Контент-колонка — единый стандарт ширины/отступов для всех страниц. */
 .content {
   position: relative;
   z-index: 2;
-  max-width: 390px;
+  max-width: var(--page-max-width);
   margin: 0 auto;
-  padding: calc(env(safe-area-inset-top, 0px) + 18px) 18px calc(env(safe-area-inset-bottom, 0px) + 30px);
+  padding:
+    calc(env(safe-area-inset-top, 0px) + 18px)
+    var(--page-padding-x)
+    calc(env(safe-area-inset-bottom, 0px) + 30px);
 }
 
 /* ── Верхняя строка: дата · лого · аватар ─────────────────────── */
