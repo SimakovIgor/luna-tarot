@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   createDonationInvoice,
@@ -27,7 +28,7 @@ interface Tier {
 
 const TIERS: Tier[] = [
   { amount: 20,  glyph: '✦', title: 'Шёпот',  hint: 'тихое спасибо' },
-  { amount: 50,  glyph: '✧', title: 'Искра',  hint: 'тёплый огонёк благодарности' },
+  { amount: 50,  glyph: '✧', title: 'Искра',  hint: 'тёплый огонёк' },
   { amount: 150, glyph: '✶', title: 'Сияние', hint: 'дыхание полнолуния' },
 ];
 
@@ -51,6 +52,7 @@ export function SupportSheet({ open, onClose, onDonated }: SupportSheetProps) {
   }, [open]);
 
   const busy = view === 'paying';
+  const activeTier = TIERS.find((t) => t.amount === selected) ?? TIERS[1];
 
   const handleConfirm = async () => {
     if (busy) return;
@@ -86,7 +88,9 @@ export function SupportSheet({ open, onClose, onDonated }: SupportSheetProps) {
     [view],
   );
 
-  return (
+  // Portal в body — гарантированно вырываемся из ScreenContainer.device
+  // (390px max-width + overflow-y:auto), который иначе обрезает sheet по бокам.
+  const content = (
     <AnimatePresence>
       {open && (
         <>
@@ -144,18 +148,17 @@ export function SupportSheet({ open, onClose, onDonated }: SupportSheetProps) {
                           disabled={busy}
                         >
                           <span className={styles.tierGlyph} aria-hidden="true">{t.glyph}</span>
-                          <span className={styles.tierBody}>
-                            <span className={styles.tierTitle}>{t.title}</span>
-                            <span className={styles.tierHint}>{t.hint}</span>
-                          </span>
                           <span className={styles.tierAmount}>
                             {t.amount}
                             <span className={styles.tierStar} aria-hidden>★</span>
                           </span>
+                          <span className={styles.tierTitle}>{t.title}</span>
                         </button>
                       );
                     })}
                   </div>
+
+                  <p className={styles.activeHint}>{activeTier.hint}</p>
 
                   {error && <p className={styles.error}>{error}</p>}
 
@@ -184,6 +187,8 @@ export function SupportSheet({ open, onClose, onDonated }: SupportSheetProps) {
       )}
     </AnimatePresence>
   );
+
+  return createPortal(content, document.body);
 }
 
 interface ThankYouProps {
