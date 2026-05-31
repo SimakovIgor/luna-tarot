@@ -51,7 +51,6 @@ export function SupportSheet({ open, onClose, onDonated }: SupportSheetProps) {
   }, [open]);
 
   const busy = view === 'paying';
-  const activeTier = TIERS.find((t) => t.amount === selected) ?? TIERS[1];
 
   const handleConfirm = async () => {
     if (busy) return;
@@ -124,8 +123,7 @@ export function SupportSheet({ open, onClose, onDonated }: SupportSheetProps) {
                     <span className={styles.headerGlyph} aria-hidden="true">✦</span>
                     <h2 className={styles.title}>Свет для Луны</h2>
                     <p className={styles.subtitle}>
-                      Если Зеркало хоть раз тебе откликнулось — поддержи,
-                      чтобы оно дальше шептало.
+                      Если Луна тебе откликнулась — поддержи её немного.
                     </p>
                   </div>
 
@@ -146,16 +144,18 @@ export function SupportSheet({ open, onClose, onDonated }: SupportSheetProps) {
                           disabled={busy}
                         >
                           <span className={styles.tierGlyph} aria-hidden="true">{t.glyph}</span>
-                          <span className={styles.tierAmount}>
-                            {t.amount}<span className={styles.tierStar} aria-hidden>★</span>
+                          <span className={styles.tierBody}>
+                            <span className={styles.tierTitle}>{t.title}</span>
+                            <span className={styles.tierHint}>{t.hint}</span>
                           </span>
-                          <span className={styles.tierTitle}>{t.title}</span>
+                          <span className={styles.tierAmount}>
+                            {t.amount}
+                            <span className={styles.tierStar} aria-hidden>★</span>
+                          </span>
                         </button>
                       );
                     })}
                   </div>
-
-                  <p className={styles.activeHint}>{activeTier.hint}</p>
 
                   {error && <p className={styles.error}>{error}</p>}
 
@@ -172,10 +172,6 @@ export function SupportSheet({ open, onClose, onDonated }: SupportSheetProps) {
                       позже
                     </button>
                   </div>
-
-                  <p className={styles.fineprint}>
-                    Telegram Stars · разовый жест без подписок
-                  </p>
                 </>
               )}
 
@@ -245,7 +241,7 @@ function ThankYouScreen({ amount, sparkles, onClose }: ThankYouProps) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.8 }}
       >
-        Твои {amount} ★ — свет внутри Зеркала.
+        Твои {amount} ★ — её свет.
         <br />
         Я рядом, когда снова понадоблюсь.
       </motion.p>
@@ -255,7 +251,7 @@ function ThankYouScreen({ amount, sparkles, onClose }: ThankYouProps) {
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5, delay: 1.2 }}
       >
-        <GoldButton onClick={onClose}>в Зеркало</GoldButton>
+        <GoldButton onClick={onClose}>к Луне</GoldButton>
       </motion.div>
     </motion.div>
   );

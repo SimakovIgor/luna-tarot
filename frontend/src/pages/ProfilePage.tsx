@@ -135,7 +135,7 @@ export function ProfilePage({ me, onClose, onMeUpdated, horoscope, horoscopeErro
               <span className={styles.supportCardGlyph} aria-hidden="true">✦</span>
               <div className={styles.supportCardTitleBlock}>
                 <span className={styles.supportCardTitle}>Поддержать Луну</span>
-                <span className={styles.supportCardSub}>звёзды → свет в Зеркале</span>
+                <span className={styles.supportCardSub}>звёзды → свет для Луны</span>
               </div>
             </div>
             {donatedStars > 0 && (

@@ -237,7 +237,7 @@ export function HubPage({
           </svg>
           <span className={styles.diaryText}>
             <span className={styles.diaryTitle}>Поддержать Луну</span>
-            <span className={styles.diaryHint}>звёзды для Зеркала</span>
+            <span className={styles.diaryHint}>звёзды для Луны</span>
           </span>
           <span className={styles.diaryArrow} aria-hidden="true">→</span>
         </motion.button>
