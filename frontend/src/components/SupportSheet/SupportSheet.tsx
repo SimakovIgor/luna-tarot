@@ -7,7 +7,6 @@ import {
   type InvoiceStatus,
 } from '@/api/donation';
 import { haptic } from '@/telegram/webapp';
-import { OrnamentalDivider } from '@/components/OrnamentalDivider/OrnamentalDivider';
 import { GoldButton } from '@/components/GoldButton/GoldButton';
 import { track, reportError } from '@/observability';
 import styles from './SupportSheet.module.css';
@@ -27,22 +26,24 @@ interface Tier {
 }
 
 const TIERS: Tier[] = [
-  { amount: 50,  glyph: '✦', title: 'Искра',     hint: 'тёплый огонёк благодарности' },
-  { amount: 150, glyph: '✧', title: 'Лунный свет', hint: 'дыхание полнолуния' },
-  { amount: 500, glyph: '✶', title: 'Созвездие',  hint: 'звёздная река поддержки' },
+  { amount: 20,  glyph: '✦', title: 'Шёпот',       hint: 'тихое спасибо' },
+  { amount: 50,  glyph: '✧', title: 'Искра',       hint: 'тёплый огонёк благодарности' },
+  { amount: 150, glyph: '✶', title: 'Лунный свет', hint: 'дыхание полнолуния' },
 ];
+
+const DEFAULT_TIER: DonationAmount = 50;
 
 type ViewState = 'choose' | 'paying' | 'thanks';
 
 export function SupportSheet({ open, onClose, onDonated }: SupportSheetProps) {
-  const [selected, setSelected] = useState<DonationAmount | null>(150);
+  const [selected, setSelected] = useState<DonationAmount>(DEFAULT_TIER);
   const [view, setView] = useState<ViewState>('choose');
   const [error, setError] = useState<string | null>(null);
   const [paidAmount, setPaidAmount] = useState<DonationAmount | null>(null);
 
   useEffect(() => {
     if (open) {
-      setSelected(150);
+      setSelected(DEFAULT_TIER);
       setView('choose');
       setError(null);
       setPaidAmount(null);
@@ -50,9 +51,10 @@ export function SupportSheet({ open, onClose, onDonated }: SupportSheetProps) {
   }, [open]);
 
   const busy = view === 'paying';
+  const activeTier = TIERS.find((t) => t.amount === selected) ?? TIERS[1];
 
   const handleConfirm = async () => {
-    if (!selected || busy) return;
+    if (busy) return;
     setError(null);
     setView('paying');
     haptic('medium');
@@ -80,7 +82,10 @@ export function SupportSheet({ open, onClose, onDonated }: SupportSheetProps) {
     }
   };
 
-  const sparkles = useMemo(() => makeSparkles(28), [view === 'thanks']); // eslint-disable-line react-hooks/exhaustive-deps
+  const sparkles = useMemo(
+    () => (view === 'thanks' ? makeSparkles(22) : []),
+    [view],
+  );
 
   return (
     <AnimatePresence>
@@ -115,11 +120,14 @@ export function SupportSheet({ open, onClose, onDonated }: SupportSheetProps) {
             <div className={styles.body}>
               {view !== 'thanks' && (
                 <>
-                  <OrnamentalDivider label="свет для луны" />
-                  <p className={styles.intro}>
-                    Если Зеркало хоть раз тебе откликнулось — поддержи Луну,
-                    чтобы я могла дальше быть рядом и хранить твои тайны.
-                  </p>
+                  <div className={styles.header}>
+                    <span className={styles.headerGlyph} aria-hidden="true">✦</span>
+                    <h2 className={styles.title}>Свет для Луны</h2>
+                    <p className={styles.subtitle}>
+                      Если Зеркало хоть раз тебе откликнулось — поддержи,
+                      чтобы оно дальше шептало.
+                    </p>
+                  </div>
 
                   <div className={styles.tiers} role="radiogroup" aria-label="Сумма">
                     {TIERS.map((t) => {
@@ -138,29 +146,35 @@ export function SupportSheet({ open, onClose, onDonated }: SupportSheetProps) {
                           disabled={busy}
                         >
                           <span className={styles.tierGlyph} aria-hidden="true">{t.glyph}</span>
-                          <span className={styles.tierTitle}>{t.title}</span>
                           <span className={styles.tierAmount}>
-                            {t.amount} <span className={styles.tierStar} aria-hidden>★</span>
+                            {t.amount}<span className={styles.tierStar} aria-hidden>★</span>
                           </span>
-                          <span className={styles.tierHint}>{t.hint}</span>
+                          <span className={styles.tierTitle}>{t.title}</span>
                         </button>
                       );
                     })}
                   </div>
 
+                  <p className={styles.activeHint}>{activeTier.hint}</p>
+
                   {error && <p className={styles.error}>{error}</p>}
 
                   <div className={styles.actions}>
-                    <GoldButton variant="ghost" onClick={onClose} disabled={busy}>
+                    <GoldButton onClick={handleConfirm} disabled={busy} full>
+                      {busy ? 'открываю…' : `Подарить ${selected} ★`}
+                    </GoldButton>
+                    <button
+                      type="button"
+                      className={styles.laterBtn}
+                      onClick={onClose}
+                      disabled={busy}
+                    >
                       позже
-                    </GoldButton>
-                    <GoldButton onClick={handleConfirm} disabled={!selected || busy}>
-                      {busy ? 'открываю…' : `Поддержать ${selected ?? ''} ★`}
-                    </GoldButton>
+                    </button>
                   </div>
 
                   <p className={styles.fineprint}>
-                    Оплата проходит через Telegram Stars. Никаких подписок, разовый жест.
+                    Telegram Stars · разовый жест без подписок
                   </p>
                 </>
               )}
@@ -209,8 +223,8 @@ function ThankYouScreen({ amount, sparkles, onClose }: ThankYouProps) {
             className={styles.sparkle}
             style={{ left: `${s.x}%`, top: `${s.y}%`, fontSize: `${s.size}px` }}
             initial={{ opacity: 0, scale: 0, y: 8 }}
-            animate={{ opacity: [0, 1, 0], scale: [0, 1, 0.6], y: [-4, -22, -36] }}
-            transition={{ duration: 1.6 + s.delay, delay: s.delay, ease: 'easeOut' }}
+            animate={{ opacity: [0, 1, 0], scale: [0, 1, 0.6], y: [-4, -18, -30] }}
+            transition={{ duration: 1.5 + s.delay, delay: s.delay, ease: 'easeOut' }}
           >
             ✦
           </motion.span>
@@ -231,7 +245,7 @@ function ThankYouScreen({ amount, sparkles, onClose }: ThankYouProps) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.8 }}
       >
-        Твои {amount} ★ — это свет внутри Зеркала.
+        Твои {amount} ★ — свет внутри Зеркала.
         <br />
         Я рядом, когда снова понадоблюсь.
       </motion.p>
@@ -260,7 +274,7 @@ function makeSparkles(count: number): SparkleSpec[] {
     id: i,
     x: Math.random() * 100,
     y: 30 + Math.random() * 50,
-    size: 10 + Math.random() * 12,
+    size: 10 + Math.random() * 10,
     delay: Math.random() * 0.6,
   }));
 }

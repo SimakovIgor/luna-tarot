@@ -1,6 +1,6 @@
 import { api } from './client';
 
-export type DonationAmount = 50 | 150 | 500;
+export type DonationAmount = 20 | 50 | 150;
 
 interface InvoiceResponse {
   slug: string;
