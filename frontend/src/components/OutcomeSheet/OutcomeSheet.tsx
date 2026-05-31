@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { ReadingOutcome } from '@/api/reading';
 import { haptic } from '@/telegram/webapp';
@@ -87,7 +88,9 @@ export function OutcomeSheet({
     }
   };
 
-  return (
+  // Через portal в body — иначе ScreenContainer 100% width на широких
+  // экранах ограничит sheet, и он визуально «вырежется».
+  const content = (
     <AnimatePresence>
       {open && (
         <>
@@ -188,4 +191,6 @@ export function OutcomeSheet({
       )}
     </AnimatePresence>
   );
+
+  return createPortal(content, document.body);
 }

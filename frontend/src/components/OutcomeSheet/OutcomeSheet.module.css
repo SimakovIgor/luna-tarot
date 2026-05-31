@@ -1,13 +1,15 @@
+/* Единый стандарт bottom-sheet — общий со SkyShareSheet и EditSheet.
+   Все три модалки выглядят одинаково (отступы, радиусы, фон, ручка). */
+
 .backdrop {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(5, 3, 12, 0.7);
+  background: rgba(5, 3, 12, 0.72);
   backdrop-filter: blur(6px);
-  z-index: 100;
-  /* iOS WKWebView fix — без translate3d fixed едет со скроллом контейнера. */
+  z-index: 1000;
   -webkit-transform: translate3d(0, 0, 0);
   transform: translate3d(0, 0, 0);
 }
@@ -17,18 +19,22 @@
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 101;
+  margin: 0 auto;
+  width: 100%;
+  max-width: 480px;
+  z-index: 1001;
+  box-sizing: border-box;
   background:
-    linear-gradient(180deg, rgba(28, 13, 51, 0.95), rgba(10, 6, 19, 0.98));
-  border-top: 1px solid var(--line, rgba(212, 175, 55, 0.25));
-  border-top-left-radius: 22px;
-  border-top-right-radius: 22px;
-  box-shadow: 0 -16px 48px rgba(0, 0, 0, 0.6);
+    radial-gradient(120% 80% at 50% 0%, rgba(124, 79, 197, 0.22), transparent 65%),
+    linear-gradient(180deg, rgba(28, 13, 51, 0.97), rgba(8, 5, 15, 0.99));
+  border-top: 1px solid rgba(217, 184, 120, 0.28);
+  border-top-left-radius: 24px;
+  border-top-right-radius: 24px;
+  box-shadow: 0 -16px 48px rgba(0, 0, 0, 0.7);
   max-height: 92vh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  /* iOS WKWebView fix. */
   -webkit-transform: translate3d(0, 0, 0);
   transform: translate3d(0, 0, 0);
 }
@@ -38,19 +44,21 @@
   width: 44px;
   height: 4px;
   border-radius: 2px;
-  background: rgba(212, 175, 55, 0.35);
+  background: rgba(217, 184, 120, 0.4);
   border: none;
   cursor: pointer;
+  flex-shrink: 0;
   transition: background 0.2s ease;
 }
-.handle:hover { background: rgba(212, 175, 55, 0.6); }
+.handle:hover { background: rgba(217, 184, 120, 0.65); }
 
 .body {
-  padding: 14px 20px 24px;
+  padding: 10px 22px max(22px, env(safe-area-inset-bottom));
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 14px;
+  box-sizing: border-box;
 }
 
 .context {

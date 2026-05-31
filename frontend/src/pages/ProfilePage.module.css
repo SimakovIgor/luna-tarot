@@ -336,12 +336,18 @@
 
 /* ── Edit sheet (через portal в body) ─────────────────────── */
 
+/* ── Bottom-sheet «Изменить данные» ──
+   Единый стандарт со SkyShareSheet (sharing) и SupportPage:
+     • backdrop blur(6px) + rgba(5,3,12,0.72)
+     • max-width 480, border-radius 24 сверху
+     • radial-gradient фон (фиолетовое свечение сверху)
+     • body padding 10/22/safe-area-bottom */
 .sheetBackdrop {
   position: fixed;
   inset: 0;
-  background: rgba(4, 2, 10, .72);
+  background: rgba(5, 3, 12, 0.72);
   backdrop-filter: blur(6px);
-  z-index: 200;
+  z-index: 1000;
   -webkit-transform: translate3d(0, 0, 0);
   transform: translate3d(0, 0, 0);
 }
@@ -353,35 +359,40 @@
   margin: 0 auto;
   width: 100%;
   max-width: 480px;
-  z-index: 201;
+  z-index: 1001;
   box-sizing: border-box;
-  background: #14101f;
-  border-top: 1px solid rgba(217, 184, 120, .3);
-  border-top-left-radius: 22px;
-  border-top-right-radius: 22px;
-  box-shadow: 0 -16px 48px rgba(0, 0, 0, .6);
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgba(124, 79, 197, 0.22), transparent 65%),
+    linear-gradient(180deg, rgba(28, 13, 51, 0.97), rgba(8, 5, 15, 0.99));
+  border-top: 1px solid rgba(217, 184, 120, 0.28);
+  border-top-left-radius: 24px;
+  border-top-right-radius: 24px;
+  box-shadow: 0 -16px 48px rgba(0, 0, 0, 0.7);
   max-height: 92vh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
   font-family: "Cormorant Garamond", Georgia, serif;
+  -webkit-transform: translate3d(0, 0, 0);
+  transform: translate3d(0, 0, 0);
 }
 .sheetHandle {
-  margin: 10px auto 0;
-  width: 38px;
+  margin: 8px auto 0;
+  width: 44px;
   height: 4px;
   border-radius: 2px;
-  background: rgba(217, 184, 120, .55);
+  background: rgba(217, 184, 120, 0.4);
   border: none;
   cursor: pointer;
   flex-shrink: 0;
 }
 .sheetBody {
-  padding: 14px 20px 24px;
+  padding: 10px 22px max(22px, env(safe-area-inset-bottom));
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 14px;
+  box-sizing: border-box;
 }
 .sheetTitle {
   text-align: center;
