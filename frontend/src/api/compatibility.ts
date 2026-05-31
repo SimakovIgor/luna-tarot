@@ -67,3 +67,17 @@ export function fetchCompatibilityInvite(slug: string): Promise<CompatibilityInv
 export function acceptCompatibilityInvite(slug: string): Promise<CompatibilityResponse> {
   return api<CompatibilityResponse>(`/compatibility/invite/${slug}/accept`, { method: 'POST' });
 }
+
+/** Pending-приглашение инициатора (друг ещё не вошёл). */
+export interface CompatibilityPendingItem {
+  id: number;
+  slug: string;
+  shareUrl: string;
+  /** ISO timestamp. */
+  createdAt: string;
+}
+
+/** Список моих pending-приглашений — для секции «ждут ответа» в Дневнике. */
+export function fetchCompatibilityPending(): Promise<CompatibilityPendingItem[]> {
+  return api<CompatibilityPendingItem[]>('/compatibility/pending');
+}

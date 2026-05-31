@@ -4,6 +4,7 @@ import com.lunatarot.backend.api.auth.AuthFilter;
 import com.lunatarot.backend.api.dto.CompatibilityHistoryItemDto;
 import com.lunatarot.backend.api.dto.CompatibilityInviteInfoDto;
 import com.lunatarot.backend.api.dto.CompatibilityInviteResponseDto;
+import com.lunatarot.backend.api.dto.CompatibilityPendingItemDto;
 import com.lunatarot.backend.api.dto.CompatibilityRequestDto;
 import com.lunatarot.backend.api.dto.CompatibilityResponseDto;
 import com.lunatarot.backend.domain.model.CompatibilityCheckEntity;
@@ -91,6 +92,20 @@ public class CompatibilityController {
         } catch (IllegalStateException e) {
             throw new ResponseStatusException(BAD_REQUEST, e.getMessage(), e);
         }
+    }
+
+    /** Список pending-приглашений инициатора. Показывается в Дневнике как «ждут ответа». */
+    @GetMapping("/pending")
+    public List<CompatibilityPendingItemDto> pending(HttpServletRequest request) {
+        UserEntity me = currentUser(request);
+        return compatibilityService.pendingFor(me.getId()).stream()
+            .map(c -> new CompatibilityPendingItemDto(
+                c.getId(),
+                c.getInviteSlug(),
+                compatibilityService.buildShareUrl(c.getInviteSlug()),
+                c.getCreatedAt()
+            ))
+            .toList();
     }
 
     /** Friend перешёл по ссылке — отдаём инфо о приглашении (имя инициатора, его знак). */

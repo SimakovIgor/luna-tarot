@@ -41,17 +41,20 @@ public class CompatibilityService {
     private final EsotericProfileCalculator calculator;
     private final CompatibilityGenerator generator;
     private final CompatibilityCheckRepository repository;
+    private final CompatibilityNotifier notifier;
     private final LunaTelegramProperties telegramProperties;
     private final Clock clock;
 
     public CompatibilityService(EsotericProfileCalculator calculator,
                                 CompatibilityGenerator generator,
                                 CompatibilityCheckRepository repository,
+                                CompatibilityNotifier notifier,
                                 LunaTelegramProperties telegramProperties,
                                 Clock clock) {
         this.calculator = calculator;
         this.generator = generator;
         this.repository = repository;
+        this.notifier = notifier;
         this.telegramProperties = telegramProperties;
         this.clock = clock;
     }
@@ -185,7 +188,15 @@ public class CompatibilityService {
         entity.setStatus(CompatibilityStatus.COMPLETED);
         // Slug больше не нужен, освобождаем чтоб не висел в уникальном индексе.
         entity.setInviteSlug(null);
-        return repository.save(entity);
+        CompatibilityCheckEntity saved = repository.save(entity);
+        // Уведомляем инициатора в боте — он не следит за приложением постоянно.
+        notifier.notifyAccepted(initiator, friend, output.score());
+        return saved;
+    }
+
+    /** Список pending-приглашений инициатора (друг ещё не вошёл). */
+    public List<CompatibilityCheckEntity> pendingFor(long userId) {
+        return repository.findPendingByInitiator(userId);
     }
 
     /** Telegram-ссылка вида https://t.me/{bot}?startapp=compat_{slug}. */

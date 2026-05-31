@@ -31,4 +31,13 @@ public interface CompatibilityCheckRepository extends JpaRepository<Compatibilit
         @Param("userId") long userId,
         @Param("limit") int limit
     );
+
+    /** Pending-приглашения инициатора, друг ещё не вошёл. */
+    @Query("""
+        SELECT c FROM CompatibilityCheckEntity c
+        WHERE c.status = com.lunatarot.backend.domain.model.enums.CompatibilityStatus.PENDING_INVITE
+          AND c.initiatorUserId = :userId
+        ORDER BY c.createdAt DESC
+        """)
+    List<CompatibilityCheckEntity> findPendingByInitiator(@Param("userId") long userId);
 }

@@ -17,10 +17,12 @@ import {
 } from '@/api/reading';
 import {
   fetchCompatibilityHistory,
+  fetchCompatibilityPending,
   type CompatibilityHistoryItem,
+  type CompatibilityPendingItem,
 } from '@/api/compatibility';
+import { haptic, isInTelegram, shareViaTelegram } from '@/telegram/webapp';
 import { ZODIAC_INFO } from '@/zodiac';
-import { haptic } from '@/telegram/webapp';
 import { SPREADS, type SpreadId } from '@/spreads/catalog';
 import { FinalLayout } from '@/spreads/FinalLayout';
 import styles from './DiaryPage.module.css';
@@ -43,25 +45,28 @@ type DiaryItem =
 
 export function DiaryPage({ onClose }: DiaryPageProps) {
   const [items, setItems] = useState<DiaryItem[] | null>(null);
+  const [pending, setPending] = useState<CompatibilityPendingItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [outcomeTarget, setOutcomeTarget] = useState<OutcomeTarget | null>(null);
 
   useEffect(() => {
     let alive = true;
-    // Тянем обе истории параллельно, склеиваем по дате. Если один из запросов
-    // провалится — показываем то, что есть; ошибку логируем во второй ставке.
+    // Тянем 3 источника параллельно: расклады + совершившаяся совместимость
+    // + pending-приглашения. Pending показывается отдельной секцией СВЕРХУ.
     Promise.all([
       fetchHistory(30).catch(() => [] as Reading[]),
       fetchCompatibilityHistory().catch(() => [] as CompatibilityHistoryItem[]),
+      fetchCompatibilityPending().catch(() => [] as CompatibilityPendingItem[]),
     ])
-      .then(([readings, compats]) => {
+      .then(([readings, compats, pendingItems]) => {
         if (!alive) return;
         const all: DiaryItem[] = [
           ...readings.map((r) => ({ kind: 'reading' as const, data: r, createdAt: r.createdAt })),
           ...compats.map((c) => ({ kind: 'compat' as const, data: c, createdAt: c.createdAt })),
         ].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
         setItems(all);
+        setPending(pendingItems);
       })
       .catch((e) => { if (alive) setError(e instanceof Error ? e.message : 'error'); });
     return () => { alive = false; };
@@ -97,7 +102,7 @@ export function DiaryPage({ onClose }: DiaryPageProps) {
             <div className={styles.empty}>
               <WhisperText size="m" tone="dim">собираю твои расклады…</WhisperText>
             </div>
-          ) : items.length === 0 ? (
+          ) : items.length === 0 && pending.length === 0 ? (
             <div className={styles.empty}>
               <WhisperText size="m" tone="dim">
                 Луна ещё не звучала тебе. Сделай первый расклад — и он останется здесь.
@@ -105,6 +110,38 @@ export function DiaryPage({ onClose }: DiaryPageProps) {
               <GoldButton onClick={onClose}>На главную</GoldButton>
             </div>
           ) : (
+            <>
+              {pending.length > 0 && (
+                <div className={styles.pendingSection}>
+                  <div className={styles.pendingHeader}>
+                    <span className={styles.pendingDot} />
+                    ждут ответа · {pending.length}
+                  </div>
+                  {pending.map((p) => (
+                    <PendingInviteCard
+                      key={p.id}
+                      item={p}
+                      onShare={() => {
+                        haptic('medium');
+                        const text = 'Пойдём, спросим у Луны? Открой ссылку — она посчитает нашу совместимость.';
+                        if (isInTelegram()) {
+                          shareViaTelegram(text, p.shareUrl);
+                        } else {
+                          const nav = navigator as Navigator & {
+                            share?: (data: { title?: string; text?: string; url?: string }) => Promise<void>;
+                            clipboard?: { writeText: (s: string) => Promise<void> };
+                          };
+                          if (nav.share) {
+                            nav.share({ title: 'Luna · совместимость', text, url: p.shareUrl }).catch(() => {});
+                          } else if (nav.clipboard) {
+                            nav.clipboard.writeText(p.shareUrl).catch(() => {});
+                          }
+                        }
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
             <div className={styles.timeline}>
               {items.map((it, idx) => {
                 const key = it.kind + '-' + it.data.id;
@@ -138,6 +175,7 @@ export function DiaryPage({ onClose }: DiaryPageProps) {
                 );
               })}
             </div>
+            </>
           )}
         </div>
       </div>
@@ -436,5 +474,31 @@ function CompatDiaryEntry({ item, expanded, onToggle }: CompatDiaryEntryProps) {
         </div>
       )}
     </button>
+  );
+}
+
+// ── PendingInviteCard ──────────────────────────────────────
+// Карточка незавершённого приглашения в «ждут ответа».
+// Видит только инициатор. Цель — дать ему быстро переотправить
+// ссылку другу если тот ещё не открыл.
+
+interface PendingInviteCardProps {
+  item: CompatibilityPendingItem;
+  onShare: () => void;
+}
+
+function PendingInviteCard({ item, onShare }: PendingInviteCardProps) {
+  const dateLabel = formatDateRu(new Date(item.createdAt));
+  return (
+    <div className={styles.pendingCard}>
+      <div className={styles.pendingMeta}>
+        <span className={styles.entryDate}>{dateLabel}</span>
+        <span className={styles.pendingTitle}>приглашение · ждёт</span>
+      </div>
+      <code className={styles.pendingUrl}>{item.shareUrl.replace('https://', '')}</code>
+      <button type="button" className={styles.pendingShareBtn} onClick={onShare}>
+        ↗ переотправить
+      </button>
+    </div>
   );
 }
