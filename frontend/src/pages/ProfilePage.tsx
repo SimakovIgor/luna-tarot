@@ -1,13 +1,17 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ScreenContainer } from '@/components/ScreenContainer/ScreenContainer';
 import { GoldButton } from '@/components/GoldButton/GoldButton';
 import { RichText } from '@/components/RichText/RichText';
+import { PersonalSky } from '@/components/PersonalSky/PersonalSky';
+import { SkyShareSheet } from '@/components/PersonalSky/SkyShareSheet';
 import { type MeResponse, type Gender, updateMe, fetchMe } from '@/api/me';
 import { ZODIAC_INFO } from '@/zodiac';
+import type { ZodiacSign } from '@/api/horoscope';
 import { haptic } from '@/telegram/webapp';
 import { describeLunarPhase } from '@/util/format';
+import { buildPoeticSkyLine } from '@/util/poeticSky';
 import styles from './ProfilePage.module.css';
 
 interface ProfilePageProps {
@@ -70,12 +74,14 @@ export function ProfilePage({
   onTapSupport,
 }: ProfilePageProps) {
   const [editing, setEditing] = useState(false);
+  const [skyShareOpen, setSkyShareOpen] = useState(false);
   const initial = (me.name?.trim()?.[0] ?? '·').toUpperCase();
   const zodiacInfo = me.zodiac ? ZODIAC_RU[me.zodiac] : null;
   const horoZodiac = me.zodiac && me.zodiac in ZODIAC_INFO
     ? ZODIAC_INFO[me.zodiac as keyof typeof ZODIAC_INFO]
     : null;
   const bornLabel = me.gender === 'FEMALE' ? 'родилась' : 'родился';
+  const poeticLine = useMemo(() => buildPoeticSkyLine(me), [me]);
 
   return (
     <ScreenContainer>
@@ -136,6 +142,18 @@ export function ProfilePage({
             ✦ Изменить данные
           </GoldButton>
         </div>
+
+        {/* Твоё небо — Constellation + поэтичная строка + share. */}
+        {me.zodiac && (
+          <>
+            <SectionLabel>Твоё небо</SectionLabel>
+            <PersonalSky
+              zodiac={me.zodiac as ZodiacSign}
+              poeticLine={poeticLine}
+              onShare={() => { haptic('light'); setSkyShareOpen(true); }}
+            />
+          </>
+        )}
 
         {/* Свет для Луны — открывает отдельный экран через onTapSupport. */}
         <SectionLabel>Свет для Луны</SectionLabel>
@@ -202,6 +220,13 @@ export function ProfilePage({
           />
         )}
       </AnimatePresence>
+
+      <SkyShareSheet
+        open={skyShareOpen}
+        onClose={() => setSkyShareOpen(false)}
+        me={me}
+        poeticLine={poeticLine}
+      />
     </ScreenContainer>
   );
 }
