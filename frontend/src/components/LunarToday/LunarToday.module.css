@@ -80,8 +80,13 @@
   border-color: var(--gold);
 }
 
+/* Внешний враппер — только height-анимация и overflow:hidden.
+   Никаких декораций, чтобы они не «вспыхивали» когда height ещё 0. */
 .expand {
   overflow: hidden;
+}
+/* Inner — здесь рамка/паддинг/гэп. Анимируется только opacity. */
+.expandInner {
   margin-top: 14px;
   padding-top: 12px;
   border-top: 1px dashed var(--gold-faint, rgba(217, 184, 120, 0.25));

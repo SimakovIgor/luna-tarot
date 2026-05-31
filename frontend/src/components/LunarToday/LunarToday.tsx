@@ -65,13 +65,23 @@ export function LunarToday({ me }: LunarTodayProps) {
         {expanded && (
           <motion.div
             className={styles.expand}
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.3, ease: [0.22, 0.85, 0.3, 1] }}
+            initial={{ height: 0 }}
+            animate={{ height: 'auto' }}
+            exit={{ height: 0 }}
+            transition={{ duration: 0.32, ease: [0.22, 0.85, 0.3, 1] }}
           >
-            <p className={styles.advice}>{advice}</p>
-            {echo && <p className={styles.echo}>{echo}</p>}
+            {/* Декорации (border, padding) внутри inner-div, чтобы не
+                «вспыхивали» на первом кадре height-анимации. */}
+            <motion.div
+              className={styles.expandInner}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.24, ease: 'easeOut' }}
+            >
+              <p className={styles.advice}>{advice}</p>
+              {echo && <p className={styles.echo}>{echo}</p>}
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
