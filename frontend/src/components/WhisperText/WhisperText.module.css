@@ -1,6 +1,6 @@
 .whisper {
   font-family: var(--font-italic);
-  font-style: italic;
+  font-style: normal;
   color: var(--ink-dim);
   line-height: 1.45;
   text-align: center;
@@ -13,4 +13,4 @@
 .ink    { color: var(--ink); }
 .faint  { color: var(--ink-faint); }
 
-.emGold em { color: var(--gold-warm); font-style: italic; font-weight: 500; }
+.emGold em { color: var(--gold-warm); font-style: normal; font-weight: 500; }

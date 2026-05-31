@@ -57,7 +57,7 @@
   text-align: center;
   font-size: 13px;
   color: var(--ink-dim, rgba(255, 255, 255, 0.65));
-  font-style: italic;
+  font-style: normal;
   margin: 4px 0 0;
   line-height: 1.4;
 }
@@ -113,7 +113,7 @@
 }
 .optionHint {
   font-size: 11px;
-  font-style: italic;
+  font-style: normal;
   color: var(--ink-faint, rgba(255, 255, 255, 0.55));
   grid-column: 2;
   grid-row: 2;
@@ -146,7 +146,7 @@
   color: var(--ink, #ede0c4);
   font-family: var(--font-italic);
   font-size: 15px;
-  font-style: italic;
+  font-style: normal;
   line-height: 1.4;
   resize: vertical;
   min-height: 70px;
@@ -168,7 +168,7 @@
   text-align: center;
   font-size: 12px;
   color: #e87e7e;
-  font-style: italic;
+  font-style: normal;
 }
 
 .actions {

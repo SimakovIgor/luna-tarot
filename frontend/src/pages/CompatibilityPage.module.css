@@ -625,5 +625,5 @@
   font-family: var(--font-display);
   font-size: 12px;
   color: var(--ink-faint);
-  font-style: italic;
+  font-style: normal;
 }

@@ -399,7 +399,7 @@ export function CompatibilityPage({ onClose, pendingInviteSlug, myName }: Compat
                   <div className={styles.inviteeStage}>
                     <Orb letter={inviterLetter} size={84} variant="gold" />
                     <h1 className={styles.inviteeTitle}>
-                      {inviteInfo.initiatorName} зовёт тебя<br />в Зеркало
+                      {inviteInfo.initiatorName} зовёт тебя<br />к Луне
                     </h1>
                     <p className={styles.heroSubtitle}>
                       Узнайте, что между вами. Луна сверит вас двоих — данные возьмёт из твоего профиля.
