@@ -15,23 +15,28 @@ import { extractFirstSentence } from './text';
 import { CONSTELLATIONS } from '@/zodiac/constellations';
 import type { ZodiacSign } from '@/api/horoscope';
 
+// 9:16 — соотношение Instagram/Telegram Stories. Совпадает с шейр-открыткой
+// из дизайн-handoff (320×569).
 const W = 1080;
-const H = 1350;
+const H = 1920;
 const LOGO_URL = '/app/luna-logo.png';
-// PNG логотипа ~1181×1181. Размещаем 380×380 по центру, чтобы золотое
-// «Luna» занимало шапку открытки в той же пропорции, что в Mini App.
+// PNG логотипа ~1181×1181 (квадратный). Размещаем 380×380 по центру.
 const LOGO_W = 380;
 const LOGO_H = 380;
-const LOGO_Y = 30;
+const LOGO_Y = 50;
 const FALLBACK_LABELS = ['ПРОШЛОЕ', 'НАСТОЯЩЕЕ', 'ГРЯДУЩЕЕ'];
 
 const PALETTE = {
-  bgTop: '#1c0d33',
-  bgBottom: '#08050f',
-  ink: '#ede0c4',
-  inkDim: '#8a7c5e',
-  goldWarm: '#d9b876',
-  gold: '#c9a14a',
+  bgTop: '#2a1d52',
+  bgBottom: '#0a0618',
+  ink: '#ece6f5',
+  inkDim: 'rgba(236,230,245,.55)',
+  inkFaint: 'rgba(236,230,245,.32)',
+  goldWarm: '#d9b878',
+  goldHi: '#f2dca0',
+  gold: '#d9b878',
+  goldDim: 'rgba(217,184,120,.55)',
+  goldFaint: 'rgba(217,184,120,.30)',
   goldDeep: '#8a6a2f',
 };
 
@@ -42,6 +47,12 @@ interface CardSlot {
   h: number;
 }
 
+/**
+ * Шеринг-открытка расклада по дизайну ShareCardImproved из handoff'а.
+ * Принцип «curiosity gap»: показываем карты + ОДНУ острую фразу-крючок,
+ * остальное прячем за плашкой «🔒 Луна сказала кое-что ещё…» — друг идёт
+ * за полным разбором в бот.
+ */
 export async function generatePostcard(reading: Reading, positionLabels?: string[]): Promise<Blob> {
   await waitForFonts();
 
@@ -51,47 +62,26 @@ export async function generatePostcard(reading: Reading, positionLabels?: string
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('No 2D context');
 
-  // Фон
-  const grad = ctx.createRadialGradient(W / 2, H * 0.2, 0, W / 2, H * 0.2, H * 0.9);
-  grad.addColorStop(0, PALETTE.bgTop);
-  grad.addColorStop(1, PALETTE.bgBottom);
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, W, H);
+  drawPostcardBackground(ctx);
 
-  drawStars(ctx);
-
-  // Лого Luna — единый PNG из Mini App (точно тот же, что и в шапке хаба).
+  // Лого Luna — единый PNG из Mini App.
   await drawLogoHeader(ctx);
 
-  ctx.font = '26px "Cinzel", serif';
-  ctx.fillStyle = PALETTE.inkDim;
+  ctx.font = '600 32px "Cormorant Garamond", serif';
+  ctx.fillStyle = PALETTE.goldDim;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
-  drawSpacedText(ctx, 'ЛУНА · ТАРО', W / 2, 380, 26, 8);
+  drawSpacedText(ctx, 'ЛУНА · ТАРО', W / 2, 450, 32, 10);
 
-  drawOrnamentDivider(ctx, W / 2, 450, 260);
-
-  // Вопрос (если есть) — между разделителем и картами. Без него получатель
-  // не понимает контекст: «Скорее нет» в воздухе не значит ничего.
-  // Триммим до ~120 символов, чтобы влезло максимум в 2 строки.
-  let cardsStartY = 520;
-  const question = (reading.question ?? '').trim();
-  if (question) {
-    const qTrim = question.length > 120 ? question.slice(0, 117).trimEnd() + '…' : question;
-    ctx.font = 'italic 32px "Cormorant Garamond", serif';
-    ctx.fillStyle = PALETTE.ink;
-    wrapText(ctx, '«' + qTrim + '»', W / 2, 490, W - 160, 44);
-    cardsStartY = 610;
-  }
-
-  // Карты — адаптивный layout
+  // ─── Карты + подписи позиций ───────────────────────────────
+  const cardsStartY = 560;
   const cardSlots = layoutCards(reading.cards.length, cardsStartY);
   const cardImages = await Promise.all(
     reading.cards.map((c) => loadImage(cardImageUrl(c.card) ?? '')),
   );
   const labels = positionLabels ?? FALLBACK_LABELS;
 
-  let lastCardBottomY = 440;
+  let lastCardBottomY = cardsStartY;
   for (let i = 0; i < reading.cards.length; i++) {
     const slot = cardSlots[i];
     const rc = reading.cards[i];
@@ -110,28 +100,56 @@ export async function generatePostcard(reading: Reading, positionLabels?: string
       }
       ctx.restore();
     }
-    // Подпись позиции — только для не слишком плотных раскладов
-    const showLabel = reading.cards.length <= 6;
-    if (showLabel) {
-      ctx.font = '18px "Cinzel", serif';
-      ctx.fillStyle = PALETTE.gold;
-      const labelText = (labels[i] ?? `${i + 1}`).toUpperCase();
-      drawSpacedText(ctx, labelText, slot.x + slot.w / 2, slot.y + slot.h + 16, 18, 4);
-    }
-    lastCardBottomY = Math.max(lastCardBottomY, slot.y + slot.h + (showLabel ? 50 : 12));
+    lastCardBottomY = Math.max(lastCardBottomY, slot.y + slot.h);
   }
 
-  // Цитата
-  const quote = extractFirstSentence(reading.interpretation || '');
-  const quoteTrimmed = quote.length > 140 ? quote.slice(0, 137).trimEnd() + '…' : quote;
-  ctx.font = 'italic 30px "Cormorant Garamond", serif';
-  ctx.fillStyle = PALETTE.inkDim;
-  wrapText(ctx, '«' + quoteTrimmed + '»', W / 2, lastCardBottomY + 50, W - 120, 42);
+  // Подписи позиций под картами (только для коротких раскладов).
+  const showLabels = reading.cards.length <= 6;
+  if (showLabels) {
+    ctx.font = '500 26px "Cormorant Garamond", serif';
+    ctx.fillStyle = PALETTE.goldDim;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    for (let i = 0; i < reading.cards.length; i++) {
+      const slot = cardSlots[i];
+      const labelText = (labels[i] ?? `${i + 1}`).toUpperCase();
+      drawSpacedText(ctx, labelText, slot.x + slot.w / 2, slot.y + slot.h + 26, 26, 4);
+    }
+    lastCardBottomY += 70;
+  }
 
-  // Бренд снизу
-  ctx.font = '22px "Cinzel", serif';
-  ctx.fillStyle = PALETTE.gold;
-  drawSpacedText(ctx, 'T.ME/LUNA_TARO_CARD_BOT', W / 2, H - 70, 22, 5);
+  // ─── HOOK — острая цитата (первое предложение) ──────────────
+  // По дизайну ShareCardImproved это «THE HOOK» в goldHi 21px Cormorant,
+  // с text-shadow. Здесь рисуем поярче, кавычки «...».
+  const quote = extractFirstSentence(reading.interpretation || '');
+  const quoteTrimmed = quote.length > 110 ? quote.slice(0, 107).trimEnd() + '…' : quote;
+  const hookY = lastCardBottomY + 70;
+  ctx.save();
+  ctx.shadowColor = 'rgba(217,184,120,.35)';
+  ctx.shadowBlur = 24;
+  ctx.font = '500 56px "Cormorant Garamond", serif';
+  ctx.fillStyle = PALETTE.goldHi;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  const hookLines = wrapText(ctx, '«' + quoteTrimmed + '»', W / 2, hookY, W - 200, 72);
+  ctx.restore();
+  const hookBottomY = hookY + Math.max(2, hookLines) * 72;
+
+  // ─── 🔒 Locked teaser pill ─────────────────────────────────
+  const teaserText = 'Луна сказала кое-что ещё…';
+  const teaserY = hookBottomY + 30;
+  drawPill(ctx, W / 2, teaserY, {
+    text: '🔒  ' + teaserText,
+    font: '500 30px "Cormorant Garamond", serif',
+    color: PALETTE.goldDim,
+    border: PALETTE.goldFaint,
+    background: 'rgba(217,184,120,.06)',
+    paddingX: 38,
+    paddingY: 20,
+  });
+
+  // ─── Footer ─────────────────────────────────────────────────
+  drawShareFooter(ctx, 'А что Луна скажет тебе?');
 
   return canvasToBlob(canvas);
 }
@@ -162,26 +180,19 @@ export async function generateCompatibilityPostcard(input: CompatibilityPostcard
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('No 2D context');
 
-  // Фон — тот же, что и в основной открытке.
-  const grad = ctx.createRadialGradient(W / 2, H * 0.2, 0, W / 2, H * 0.2, H * 0.9);
-  grad.addColorStop(0, PALETTE.bgTop);
-  grad.addColorStop(1, PALETTE.bgBottom);
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, W, H);
-  drawStars(ctx);
+  drawPostcardBackground(ctx);
 
   // Лого Luna — единый PNG.
   await drawLogoHeader(ctx);
 
-  ctx.font = '26px "Cinzel", serif';
-  ctx.fillStyle = PALETTE.inkDim;
+  ctx.font = '600 32px "Cormorant Garamond", serif';
+  ctx.fillStyle = PALETTE.goldDim;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
-  drawSpacedText(ctx, 'СОВМЕСТИМОСТЬ', W / 2, 380, 26, 8);
-  drawOrnamentDivider(ctx, W / 2, 450, 260);
+  drawSpacedText(ctx, 'СОВМЕСТИМОСТЬ', W / 2, 450, 32, 10);
 
   // Два круга-знака + процент посередине
-  const ringY = 680;
+  const ringY = 900;
   const ringRadius = 130;
   const leftCx = W / 2 - 220;
   const rightCx = W / 2 + 220;
@@ -226,10 +237,8 @@ export async function generateCompatibilityPostcard(input: CompatibilityPostcard
     wrapText(ctx, '«' + captionTrim + '»', W / 2, ringY + ringRadius + 160, W - 160, 42);
   }
 
-  // Бренд снизу
-  ctx.font = '22px "Cinzel", serif';
-  ctx.fillStyle = PALETTE.gold;
-  drawSpacedText(ctx, 'T.ME/LUNA_TARO_CARD_BOT', W / 2, H - 70, 22, 5);
+  // Footer с CTA «Спросить Луну» — единый паттерн с reading postcard.
+  drawShareFooter(ctx, 'А что Луна скажет о вас?');
 
   return canvasToBlob(canvas);
 }
@@ -265,63 +274,53 @@ export async function generateSkyPostcard(input: SkyPostcardInput): Promise<Blob
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('No 2D context');
 
-  // Фон — тот же радиальный, что у других открыток.
-  const grad = ctx.createRadialGradient(W / 2, H * 0.2, 0, W / 2, H * 0.2, H * 0.9);
-  grad.addColorStop(0, PALETTE.bgTop);
-  grad.addColorStop(1, PALETTE.bgBottom);
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, W, H);
-  drawStars(ctx);
+  drawPostcardBackground(ctx);
 
   // Лого Luna — единый PNG.
   await drawLogoHeader(ctx);
 
-  ctx.font = '26px "Cinzel", serif';
-  ctx.fillStyle = PALETTE.inkDim;
+  ctx.font = '600 32px "Cormorant Garamond", serif';
+  ctx.fillStyle = PALETTE.goldDim;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
-  drawSpacedText(ctx, 'ЛУНА · ТАРО', W / 2, 380, 26, 8);
-
-  drawOrnamentDivider(ctx, W / 2, 450, 260);
+  drawSpacedText(ctx, 'ЛУНА · ТАРО', W / 2, 450, 32, 10);
 
   // Круглый диск со зодиакальным кольцом + созвездием.
   const discCx = W / 2;
-  const discCy = 700;
-  const discR = 210;
+  const discCy = 870;
+  const discR = 260;
   drawSkyDisc(ctx, discCx, discCy, discR, input.zodiac);
 
-  // Название знака — Cormorant 70px.
-  ctx.fillStyle = PALETTE.goldWarm;
-  ctx.font = 'bold 76px "Cormorant Garamond", serif';
+  // Название знака.
+  ctx.fillStyle = PALETTE.goldHi;
+  ctx.font = '600 88px "Cormorant Garamond", serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
-  ctx.shadowColor = 'rgba(201,161,74,0.45)';
+  ctx.shadowColor = 'rgba(217,184,120,0.45)';
   ctx.shadowBlur = 22;
-  ctx.fillText(input.signLabel, W / 2, discCy + discR + 28);
+  ctx.fillText(input.signLabel, W / 2, discCy + discR + 40);
   ctx.shadowBlur = 0;
 
   // Подпись «Небо Игоря · 16 марта 1995».
-  ctx.font = 'italic 30px "Cormorant Garamond", serif';
+  ctx.font = '500 32px "Cormorant Garamond", serif';
   ctx.fillStyle = PALETTE.inkDim;
   const birthSuffix = input.birthDate ? ' · ' + formatBirthRu(input.birthDate) : '';
-  ctx.fillText('Небо ' + (input.name || '—') + birthSuffix, W / 2, discCy + discR + 120);
+  ctx.fillText('Небо ' + (input.name || '—') + birthSuffix, W / 2, discCy + discR + 150);
 
-  // Поэтичная строка — крупная цитата.
-  const trimmedPoetic = input.poeticLine.length > 180
-    ? input.poeticLine.slice(0, 177).trimEnd() + '…'
+  // Поэтичная строка — крупная цитата как HOOK.
+  const trimmedPoetic = input.poeticLine.length > 140
+    ? input.poeticLine.slice(0, 137).trimEnd() + '…'
     : input.poeticLine;
-  ctx.font = '36px "Cormorant Garamond", serif';
-  ctx.fillStyle = PALETTE.goldWarm;
-  wrapText(ctx, '«' + trimmedPoetic + '»', W / 2, discCy + discR + 180, W - 160, 50);
+  ctx.save();
+  ctx.shadowColor = 'rgba(217,184,120,.3)';
+  ctx.shadowBlur = 22;
+  ctx.font = '500 44px "Cormorant Garamond", serif';
+  ctx.fillStyle = PALETTE.goldHi;
+  wrapText(ctx, '«' + trimmedPoetic + '»', W / 2, discCy + discR + 220, W - 180, 58);
+  ctx.restore();
 
-  // CTA + бот.
-  ctx.font = '26px "Cinzel", serif';
-  ctx.fillStyle = PALETTE.gold;
-  drawSpacedText(ctx, 'УЗНАТЬ СВОЁ НЕБО →', W / 2, H - 150, 26, 8);
-
-  ctx.font = '22px "Cinzel", serif';
-  ctx.fillStyle = PALETTE.goldDeep;
-  drawSpacedText(ctx, 'T.ME/LUNA_TARO_CARD_BOT', W / 2, H - 80, 22, 5);
+  // Footer с CTA «Спросить Луну» — единый паттерн.
+  drawShareFooter(ctx, 'А какое небо у тебя?');
 
   return canvasToBlob(canvas);
 }
@@ -492,9 +491,10 @@ function drawZodiacRing(
 
 /** Раскладка слотов для N карт. Возвращает координаты в исходной системе 1080×1350. */
 function layoutCards(count: number, startY: number): CardSlot[] {
+  // 1-3 карты — крупные в один ряд.
   if (count <= 3) {
-    const cardW = 240;
-    const cardH = 384;
+    const cardW = 270;
+    const cardH = 432;
     const gap = 30;
     const totalW = cardW * count + gap * (count - 1);
     const startX = (W - totalW) / 2;
@@ -505,23 +505,24 @@ function layoutCards(count: number, startY: number): CardSlot[] {
       h: cardH,
     }));
   }
-  if (count <= 6) {
-    const cardW = 150;
-    const cardH = 240;
-    const gap = 22;
+  // 4-5 — средние в один ряд (ещё помещаются по ширине).
+  if (count <= 5) {
+    const cardW = 180;
+    const cardH = 288;
+    const gap = 18;
     const totalW = cardW * count + gap * (count - 1);
-    const startX = Math.max(60, (W - totalW) / 2);
+    const startX = Math.max(40, (W - totalW) / 2);
     return Array.from({ length: count }, (_, i) => ({
       x: startX + i * (cardW + gap),
-      y: startY + 80,
+      y: startY,
       w: cardW,
       h: cardH,
     }));
   }
-  // 7-12: две строки
+  // 6+ — две строки.
   const perRow = Math.ceil(count / 2);
-  const cardW = 130;
-  const cardH = 208;
+  const cardW = 150;
+  const cardH = 240;
   const gap = 14;
   const totalW = cardW * perRow + gap * (perRow - 1);
   const startX = Math.max(40, (W - totalW) / 2);
@@ -530,7 +531,7 @@ function layoutCards(count: number, startY: number): CardSlot[] {
     const col = i % perRow;
     return {
       x: startX + col * (cardW + gap),
-      y: startY + 40 + row * (cardH + 36),
+      y: startY + row * (cardH + 30),
       w: cardW,
       h: cardH,
     };
@@ -700,33 +701,6 @@ function drawSpacedText(
   ctx.textAlign = 'center';
 }
 
-function drawOrnamentDivider(ctx: CanvasRenderingContext2D, cx: number, y: number, width: number) {
-  const half = width / 2;
-  const lg = ctx.createLinearGradient(cx - half, y, cx, y);
-  lg.addColorStop(0, 'rgba(138,106,47,0)');
-  lg.addColorStop(1, PALETTE.goldDeep);
-  ctx.strokeStyle = lg;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(cx - half, y);
-  ctx.lineTo(cx - 24, y);
-  ctx.stroke();
-  const rg = ctx.createLinearGradient(cx, y, cx + half, y);
-  rg.addColorStop(0, PALETTE.goldDeep);
-  rg.addColorStop(1, 'rgba(138,106,47,0)');
-  ctx.strokeStyle = rg;
-  ctx.beginPath();
-  ctx.moveTo(cx + 24, y);
-  ctx.lineTo(cx + half, y);
-  ctx.stroke();
-  ctx.fillStyle = PALETTE.gold;
-  ctx.font = '24px "Cinzel", serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('✦', cx, y);
-  ctx.textBaseline = 'top';
-}
-
 function drawCardFrame(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) {
   ctx.save();
   ctx.shadowColor = 'rgba(0,0,0,0.7)';
@@ -772,7 +746,7 @@ function wrapText(
   startY: number,
   maxWidth: number,
   lineHeight: number,
-) {
+): number {
   const words = text.split(' ');
   const lines: string[] = [];
   let line = '';
@@ -788,4 +762,114 @@ function wrapText(
   if (line) lines.push(line);
   ctx.textAlign = 'center';
   lines.forEach((l, i) => ctx.fillText(l, cx, startY + i * lineHeight));
+  return lines.length;
+}
+
+/**
+ * Единый footer всех share-открыток: тонкая золотая линия + строка-hook
+ * + pill-кнопка «Спросить Луну →» + URL бота. Заменяет дублирование
+ * на 3 открытках.
+ */
+function drawShareFooter(ctx: CanvasRenderingContext2D, hookHeadline: string): void {
+  const footerTop = H - 380;
+  ctx.strokeStyle = PALETTE.goldFaint;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(140, footerTop);
+  ctx.lineTo(W - 140, footerTop);
+  ctx.stroke();
+
+  ctx.font = '600 48px "Cormorant Garamond", serif';
+  ctx.fillStyle = PALETTE.ink;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillText(hookHeadline, W / 2, footerTop + 38);
+
+  drawPill(ctx, W / 2, footerTop + 130, {
+    text: 'СПРОСИТЬ ЛУНУ →',
+    font: '600 32px "Cormorant Garamond", serif',
+    color: PALETTE.goldHi,
+    border: PALETTE.gold,
+    background: 'linear',
+    paddingX: 52,
+    paddingY: 22,
+    letterSpacing: 4,
+  });
+
+  ctx.font = '500 26px "Cormorant Garamond", serif';
+  ctx.fillStyle = PALETTE.inkFaint;
+  drawSpacedText(ctx, 'T.ME/LUNA_TARO_CARD_BOT', W / 2, H - 80, 26, 5);
+}
+
+/** Радиальный градиент-фон + редкие звёзды для всех открыток (9:16). */
+function drawPostcardBackground(ctx: CanvasRenderingContext2D): void {
+  const grad = ctx.createRadialGradient(W / 2, H * 0.18, 0, W / 2, H * 0.18, H * 0.85);
+  grad.addColorStop(0, PALETTE.bgTop);
+  grad.addColorStop(0.45, '#160d34');
+  grad.addColorStop(1, PALETTE.bgBottom);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+  drawStars(ctx);
+}
+
+interface PillOptions {
+  text: string;
+  font: string;
+  color: string;
+  border: string;
+  /** 'linear' = золотой градиент primary, иначе CSS-цвет. */
+  background: string;
+  paddingX: number;
+  paddingY: number;
+  letterSpacing?: number;
+}
+
+/**
+ * Рисует pill-кнопку по центру: фон, бордер, текст внутри.
+ * Высоту берёт из font height + paddingY * 2, ширина — text width + paddingX * 2.
+ */
+function drawPill(ctx: CanvasRenderingContext2D, cx: number, topY: number, opt: PillOptions): void {
+  ctx.font = opt.font;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  const ls = opt.letterSpacing ?? 0;
+  const textW = ls > 0
+    ? [...opt.text].reduce((acc, ch) => acc + ctx.measureText(ch).width, 0) + ls * (opt.text.length - 1)
+    : ctx.measureText(opt.text).width;
+  // Высота — приблизительно size в px (font format: '... NNpx ...').
+  const fontMatch = opt.font.match(/(\d+)px/);
+  const textH = fontMatch ? parseInt(fontMatch[1], 10) : 32;
+  const pillW = textW + opt.paddingX * 2;
+  const pillH = textH + opt.paddingY * 2;
+  const x = cx - pillW / 2;
+  // Background.
+  ctx.save();
+  if (opt.background === 'linear') {
+    const g = ctx.createLinearGradient(x, topY, x, topY + pillH);
+    g.addColorStop(0, 'rgba(217,184,120,.2)');
+    g.addColorStop(1, 'rgba(217,184,120,.07)');
+    ctx.fillStyle = g;
+  } else {
+    ctx.fillStyle = opt.background;
+  }
+  roundedRectPath(ctx, x, topY, pillW, pillH, pillH / 2);
+  ctx.fill();
+  ctx.strokeStyle = opt.border;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.restore();
+  // Текст.
+  ctx.fillStyle = opt.color;
+  ctx.font = opt.font;
+  if (ls > 0) {
+    let tx = cx - textW / 2;
+    const ty = topY + opt.paddingY;
+    for (let i = 0; i < opt.text.length; i++) {
+      ctx.fillText(opt.text[i], tx, ty);
+      tx += ctx.measureText(opt.text[i]).width + ls;
+    }
+  } else {
+    ctx.textAlign = 'center';
+    ctx.fillText(opt.text, cx, topY + opt.paddingY);
+  }
 }
