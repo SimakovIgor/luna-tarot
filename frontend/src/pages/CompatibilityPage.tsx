@@ -240,7 +240,7 @@ function CompatShareButton({ result }: { result: CompatibilityResponse }) {
   return (
     <div className={styles.shareWrap}>
       <GoldButton onClick={handleClick} disabled={busy} full>
-        {busy ? 'Готовлю…' : 'Поделиться результатом'}
+        {busy ? 'Готовлю…' : 'Поделиться'}
       </GoldButton>
       {hint && <div className={styles.shareHint}>{hint}</div>}
     </div>

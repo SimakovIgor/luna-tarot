@@ -683,7 +683,7 @@ function ShareButton({ reading, spread }: { reading: Reading; spread: SpreadDesc
   return (
     <div className={styles.shareWrap}>
       <GoldButton onClick={handleClick} disabled={busy} full>
-        {busy ? 'Готовлю…' : 'Поделиться раскладом'}
+        {busy ? 'Готовлю…' : 'Поделиться'}
       </GoldButton>
       {hint && <div className={styles.shareHint}>{hint}</div>}
     </div>
