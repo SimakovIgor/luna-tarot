@@ -1,6 +1,5 @@
 import { useEffect, useState, type MutableRefObject } from 'react';
 import { motion } from 'framer-motion';
-import { StarField } from '@/components/StarField/StarField';
 import { DayCard } from '@/components/DayCard/DayCard';
 import { fetchMe, type MeResponse } from '@/api/me';
 import { cardImageUrl, type Reading } from '@/api/reading';
@@ -122,11 +121,11 @@ export function HubPage({
     transition: { duration: 0.6, delay: 0.1 + i * 0.07, ease: [0.22, 0.85, 0.3, 1] as const },
   });
 
+  // calmRef живёт в App, прокинут сюда только для совместимости сигнатуры.
+  void calmRef;
+
   return (
     <div className={styles.root}>
-      {/* Общий звёздный фон. calmRef=1 на хабе → медленный дрейф. */}
-      <StarField calmRef={calmRef} />
-
       <div className={styles.content}>
         {/* Верхняя строка: дата · лого · аватар */}
         <motion.div className={styles.topRow} {...stagger(0)}>

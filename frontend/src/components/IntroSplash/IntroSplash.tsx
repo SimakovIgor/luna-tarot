@@ -1,6 +1,5 @@
 import { useEffect, useState, type MutableRefObject } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { StarField } from '@/components/StarField/StarField';
 import styles from './IntroSplash.module.css';
 
 interface IntroSplashProps {
@@ -26,6 +25,9 @@ export function IntroSplash({
   minDurationMs = 2400,
   calmRef,
 }: IntroSplashProps) {
+  // calmRef живёт в App вместе с единственным StarField — splash сам ничего
+  // не делает с ним, ramp 0→1 запускается из App в onSettleCard.
+  void calmRef;
   const [phase, setPhase] = useState<'in' | 'out'>('in');
 
   // Карта дня на App-уровне «успокаивается» одновременно со звёздами —
@@ -51,9 +53,7 @@ export function IntroSplash({
           exit={{ opacity: 0 }}
           transition={{ duration: 0.85, ease: [0.4, 0, 0.2, 1] }}
         >
-          {/* Общий звёздный фон. calmRef = 0 → быстрый разлёт. */}
-          <StarField calmRef={calmRef} />
-
+          {/* StarField живёт в App на всём viewport, splash рисует только overlay. */}
           <motion.div
             className={styles.stage}
             initial={{ opacity: 0, scale: 0.96 }}

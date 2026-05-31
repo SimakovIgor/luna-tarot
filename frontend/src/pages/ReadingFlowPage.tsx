@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ScreenContainer } from '@/components/ScreenContainer/ScreenContainer';
-import { StarField } from '@/components/StarField/StarField';
 import { GoldButton } from '@/components/GoldButton/GoldButton';
 import { CardBack } from '@/components/TarotCard/CardBack';
 import { OrnamentalDivider } from '@/components/OrnamentalDivider/OrnamentalDivider';
@@ -36,7 +35,6 @@ const MAX_Q = 500;
 
 export function ReadingFlowPage({ spreadId, onClose }: ReadingFlowPageProps) {
   const spread = getSpread(spreadId);
-  const calmRef = useRef(1);
   const [stage, setStage] = useState<Stage>('question');
   const [question, setQuestion] = useState('');
   const [picked, setPicked] = useState<number[]>([]); // позиции карт в веере
@@ -96,7 +94,6 @@ export function ReadingFlowPage({ spreadId, onClose }: ReadingFlowPageProps) {
 
   return (
     <ScreenContainer>
-      <StarField calmRef={calmRef} />
       <div className={styles.shell}>
         <div className={styles.topbar}>
           <BackButton onClick={onClose} />

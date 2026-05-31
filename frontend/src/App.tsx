@@ -6,7 +6,7 @@ import { DesignReviewPage, OnboardingDemoPage, ReadingDemoPage, DiaryDemoPage } 
 import { HubPage } from './pages/HubPage';
 import { OnboardingPage } from './pages/OnboardingPage';
 import { IntroSplash } from './components/IntroSplash/IntroSplash';
-import { DayCard } from './components/DayCard/DayCard';
+import { StarField } from './components/StarField/StarField';
 import { useCardOfDay } from './hooks/useCardOfDay';
 import { useHoroscope } from './hooks/useHoroscope';
 import { identify } from './observability';
@@ -27,8 +27,6 @@ export function App() {
 
   const [state, setState] = useState<AppState>({ kind: 'loading' });
   const [splashGone, setSplashGone] = useState(false);
-  // Карта живёт ВСЁ время вверху App; splash управляет только её вращением через cardSpinning.
-  const [cardSpinning, setCardSpinning] = useState(true);
   const [dayFlipped, setDayFlipped] = useState(false);
   // Hub-уровневая навигация: на каком sub-экране юзер сейчас. Нужно App,
   // чтобы скрывать DayCard когда юзер ушёл с хаба (Profile/Reading/Diary).
@@ -101,34 +99,24 @@ export function App() {
   if (isDiaryDemo) {
     return <DiaryDemoPage />;
   }
-  // DayCard на App-уровне рендерится ТОЛЬКО во время splash — как fixed-overlay
-  // для cinematic intro-эффекта. После splash карта живёт inline внутри HubPage
-  // (часть скроллящегося потока, без position:fixed) — так она ведёт себя
-  // предсказуемо в Telegram WebView без багов containing block.
-  const baseShow = !isDemo && state.kind !== 'no-telegram' && state.kind !== 'auth-failed';
-  const showSplashCard = baseShow && showSplash;
-  // activeSubView нужно ещё для других целей — оставлен в state, но не влияет на карту здесь.
+  // По новому дизайну DayCard на splash НЕ рендерится — splash чистый,
+  // только полумесяц + лого + капс. Карта дня живёт только внутри HubPage.
   void activeSubView;
   void hubReady;
 
   return (
     <>
-      {showSplashCard && (
-        <DayCard
-          cardOfDay={cardOfDay}
-          flipped={dayFlipped}
-          onFlip={setDayFlipped}
-          spinning={cardSpinning}
-          interactive={splashGone}
-        />
-      )}
+      {/* Единственный StarField на всё приложение — position: fixed на весь
+          viewport, никогда не перемонтируется. При смене страниц звёзды
+          продолжают свой полёт без скачка. */}
+      <StarField calmRef={calmRef} />
+
       {showSplash && (
         <IntroSplash
           calmRef={calmRef}
           onSettleCard={() => {
-            setCardSpinning(false);
-            // Параллельно с settle карты — плавный ramp фона 0→1 за 1.2с.
-            // Звёзды успокаиваются к моменту, когда splash exit'нет.
+            // Плавный ramp скорости звёзд 0→1 за 1.2с — переход от
+            // динамичного разлёта на splash к спокойному дрейфу на hub.
             const start = performance.now();
             const ramp = () => {
               const e = Math.min((performance.now() - start) / 1200, 1);

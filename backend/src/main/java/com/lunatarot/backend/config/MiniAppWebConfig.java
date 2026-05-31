@@ -42,7 +42,15 @@ public class MiniAppWebConfig implements WebMvcConfigurer {
             .addResourceLocations("classpath:/static/app/cards/")
             .setCacheControl(CacheControl.maxAge(365, TimeUnit.DAYS).immutable());
 
-        // 3) Catch-all: index.html, fallback для SPA-роутинга и прочее — no-store.
+        // 3) Статичные иконки/лого в корне /app/ (luna-logo.png, favicon и т.п.) —
+        //    кэшируем на 30 дней. Без этого браузер качал бы PNG при каждом
+        //    открытии Mini App, потому что catch-all ниже стоит no-store.
+        registry.addResourceHandler(
+                "/app/*.png", "/app/*.svg", "/app/*.ico", "/app/*.webp", "/app/*.jpg")
+            .addResourceLocations("classpath:/static/app/")
+            .setCacheControl(CacheControl.maxAge(30, TimeUnit.DAYS).cachePublic());
+
+        // 4) Catch-all: index.html, fallback для SPA-роутинга и прочее — no-store.
         //    Telegram WebView получает свежий HTML при каждом открытии Mini App.
         registry.addResourceHandler("/app/**")
             .addResourceLocations("classpath:/static/app/")

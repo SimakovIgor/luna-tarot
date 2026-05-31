@@ -1,7 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ScreenContainer } from '@/components/ScreenContainer/ScreenContainer';
-import { MoonBackground } from '@/components/MoonBackground/MoonBackground';
 import { BrandMark } from '@/components/BrandMark/BrandMark';
 import { GoldButton } from '@/components/GoldButton/GoldButton';
 import { WhisperText } from '@/components/WhisperText/WhisperText';
@@ -108,7 +107,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
 
   return (
     <ScreenContainer>
-      <MoonBackground />
+      
 
       <div className={styles.shell}>
         {STEPS_PROGRESS.includes(step) && (

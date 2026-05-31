@@ -1,7 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ScreenContainer } from '@/components/ScreenContainer/ScreenContainer';
-import { MoonBackground } from '@/components/MoonBackground/MoonBackground';
 import { SparkleField } from '@/components/SparkleField/SparkleField';
 import { OrnamentalDivider } from '@/components/OrnamentalDivider/OrnamentalDivider';
 import { WhisperText } from '@/components/WhisperText/WhisperText';
@@ -72,7 +71,7 @@ export function CompatibilityPage({ onClose }: CompatibilityPageProps) {
 
   return (
     <ScreenContainer>
-      <MoonBackground />
+      
       {stage === 'loading' && <SparkleField count={40} speed={1.8} />}
       <div className={styles.shell}>
         <div className={styles.topbar}>

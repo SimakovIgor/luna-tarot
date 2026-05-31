@@ -1,8 +1,7 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ScreenContainer } from '@/components/ScreenContainer/ScreenContainer';
-import { StarField } from '@/components/StarField/StarField';
 import { GoldButton } from '@/components/GoldButton/GoldButton';
 import { RichText } from '@/components/RichText/RichText';
 import { type MeResponse, type Gender, updateMe, fetchMe } from '@/api/me';
@@ -71,8 +70,6 @@ export function ProfilePage({
   onTapSupport,
 }: ProfilePageProps) {
   const [editing, setEditing] = useState(false);
-  // На профиле сцена всегда спокойная — звёзды дрейфуют в базовом темпе.
-  const calmRef = useRef(1);
   const initial = (me.name?.trim()?.[0] ?? '·').toUpperCase();
   const zodiacInfo = me.zodiac ? ZODIAC_RU[me.zodiac] : null;
   const horoZodiac = me.zodiac && me.zodiac in ZODIAC_INFO
@@ -82,7 +79,6 @@ export function ProfilePage({
 
   return (
     <ScreenContainer>
-      <StarField calmRef={calmRef} />
       <div className={styles.shell}>
         {/* Top bar — кнопка «Назад» pill + капс «Профиль» справа. */}
         <div className={styles.topbar}>

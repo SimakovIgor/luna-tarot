@@ -128,12 +128,9 @@ html, body {
 body {
   font-family: var(--font-body);
   color: var(--ink);
+  /* StarField (App-level) рисует тёмный фон с фиолетовым свечением сверху.
+     Body просто чёрный — safety-fallback для первого кадра до StarField. */
   background-color: var(--bg-deep);
-  /* Радиальный градиент по новому дизайну: фиолетовое свечение вверху,
-     уходящее в глубокий тёмный книзу. background-attachment: fixed УБРАН —
-     ломает position:fixed у детей в iOS WKWebView. */
-  background-image: var(--bg-radial);
-  background-repeat: no-repeat;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

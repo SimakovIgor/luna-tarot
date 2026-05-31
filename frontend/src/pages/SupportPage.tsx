@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   createDonationInvoice,
@@ -8,7 +8,6 @@ import {
 } from '@/api/donation';
 import { haptic } from '@/telegram/webapp';
 import { GoldButton } from '@/components/GoldButton/GoldButton';
-import { StarField } from '@/components/StarField/StarField';
 import { track, reportError } from '@/observability';
 import styles from './SupportPage.module.css';
 
@@ -43,7 +42,6 @@ const SPARKLE_POS: ReadonlyArray<[string, string, number]> = [
 ];
 
 export function SupportPage({ onClose, onDonated }: SupportPageProps) {
-  const calmRef = useRef(1);
   const [selected, setSelected] = useState<DonationAmount>(DEFAULT_TIER);
   const [view, setView] = useState<View>('choose');
   const [error, setError] = useState<string | null>(null);
@@ -94,8 +92,6 @@ export function SupportPage({ onClose, onDonated }: SupportPageProps) {
 
   return (
     <div className={styles.shell}>
-      <StarField calmRef={calmRef} />
-
       <div className={styles.topbar}>
         <button type="button" className={styles.backBtn} onClick={onClose} disabled={busy}>
           ← Назад

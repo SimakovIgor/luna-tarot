@@ -62,11 +62,10 @@ export function StarField({ calmRef }: StarFieldProps) {
     });
 
     const resize = () => {
-      const parent = canvas.parentElement ?? document.body;
-      const rect = parent.getBoundingClientRect();
+      // На весь viewport, не относительно parent — StarField лежит position:fixed.
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      W = Math.max(1, Math.round(rect.width));
-      H = Math.max(1, Math.round(rect.height));
+      W = Math.max(1, Math.round(window.innerWidth));
+      H = Math.max(1, Math.round(window.innerHeight));
       canvas.width = W * dpr;
       canvas.height = H * dpr;
       canvas.style.width = `${W}px`;
@@ -129,10 +128,11 @@ export function StarField({ calmRef }: StarFieldProps) {
       ref={canvasRef}
       aria-hidden="true"
       style={{
-        position: 'absolute',
-        inset: 0,
-        width: '100%',
-        height: '100%',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
         zIndex: 0,
         pointerEvents: 'none',
       }}

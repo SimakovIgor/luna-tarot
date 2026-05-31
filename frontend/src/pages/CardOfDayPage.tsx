@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ScreenContainer } from '@/components/ScreenContainer/ScreenContainer';
-import { MoonBackground } from '@/components/MoonBackground/MoonBackground';
 import { GoldButton } from '@/components/GoldButton/GoldButton';
 import { TarotCard } from '@/components/TarotCard/TarotCard';
 import { OrnamentalDivider } from '@/components/OrnamentalDivider/OrnamentalDivider';
@@ -40,7 +39,7 @@ export function CardOfDayPage({ onClose, preloaded = null, startFlipped = false 
 
   return (
     <ScreenContainer>
-      <MoonBackground />
+      
       <div className={styles.shell}>
         <div className={styles.topbar}>
           <BackButton onClick={onClose} />

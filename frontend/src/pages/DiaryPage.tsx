@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ScreenContainer } from '@/components/ScreenContainer/ScreenContainer';
-import { MoonBackground } from '@/components/MoonBackground/MoonBackground';
 import { OrnamentalDivider } from '@/components/OrnamentalDivider/OrnamentalDivider';
 import { WhisperText } from '@/components/WhisperText/WhisperText';
 import { GoldButton } from '@/components/GoldButton/GoldButton';
@@ -50,7 +49,7 @@ export function DiaryPage({ onClose }: DiaryPageProps) {
 
   return (
     <ScreenContainer>
-      <MoonBackground />
+      
       <div className={styles.shell}>
         <div className={styles.topbar}>
           <BackButton onClick={onClose} />
