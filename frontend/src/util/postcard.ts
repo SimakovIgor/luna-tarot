@@ -17,6 +17,12 @@ import type { ZodiacSign } from '@/api/horoscope';
 
 const W = 1080;
 const H = 1350;
+const LOGO_URL = '/app/luna-logo.png';
+// PNG логотипа ~1181×1181. Размещаем 380×380 по центру, чтобы золотое
+// «Luna» занимало шапку открытки в той же пропорции, что в Mini App.
+const LOGO_W = 380;
+const LOGO_H = 380;
+const LOGO_Y = 30;
 const FALLBACK_LABELS = ['ПРОШЛОЕ', 'НАСТОЯЩЕЕ', 'ГРЯДУЩЕЕ'];
 
 const PALETTE = {
@@ -54,33 +60,28 @@ export async function generatePostcard(reading: Reading, positionLabels?: string
 
   drawStars(ctx);
 
-  // Лого "Luna"
-  ctx.fillStyle = PALETTE.goldWarm;
-  ctx.font = '200px "UnifrakturMaguntia", serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'top';
-  ctx.shadowColor = 'rgba(201,161,74,0.45)';
-  ctx.shadowBlur = 30;
-  ctx.fillText('Luna', W / 2, 90);
-  ctx.shadowBlur = 0;
+  // Лого Luna — единый PNG из Mini App (точно тот же, что и в шапке хаба).
+  await drawLogoHeader(ctx);
 
   ctx.font = '26px "Cinzel", serif';
   ctx.fillStyle = PALETTE.inkDim;
-  drawSpacedText(ctx, 'ЛУНА · ТАРО', W / 2, 290, 26, 8);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  drawSpacedText(ctx, 'ЛУНА · ТАРО', W / 2, 380, 26, 8);
 
-  drawOrnamentDivider(ctx, W / 2, 370, 260);
+  drawOrnamentDivider(ctx, W / 2, 450, 260);
 
   // Вопрос (если есть) — между разделителем и картами. Без него получатель
   // не понимает контекст: «Скорее нет» в воздухе не значит ничего.
   // Триммим до ~120 символов, чтобы влезло максимум в 2 строки.
-  let cardsStartY = 440;
+  let cardsStartY = 520;
   const question = (reading.question ?? '').trim();
   if (question) {
     const qTrim = question.length > 120 ? question.slice(0, 117).trimEnd() + '…' : question;
     ctx.font = 'italic 32px "Cormorant Garamond", serif';
     ctx.fillStyle = PALETTE.ink;
-    wrapText(ctx, '«' + qTrim + '»', W / 2, 410, W - 160, 44);
-    cardsStartY = 530;
+    wrapText(ctx, '«' + qTrim + '»', W / 2, 490, W - 160, 44);
+    cardsStartY = 610;
   }
 
   // Карты — адаптивный layout
@@ -169,23 +170,18 @@ export async function generateCompatibilityPostcard(input: CompatibilityPostcard
   ctx.fillRect(0, 0, W, H);
   drawStars(ctx);
 
-  // Лого
-  ctx.fillStyle = PALETTE.goldWarm;
-  ctx.font = '200px "UnifrakturMaguntia", serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'top';
-  ctx.shadowColor = 'rgba(201,161,74,0.45)';
-  ctx.shadowBlur = 30;
-  ctx.fillText('Luna', W / 2, 90);
-  ctx.shadowBlur = 0;
+  // Лого Luna — единый PNG.
+  await drawLogoHeader(ctx);
 
   ctx.font = '26px "Cinzel", serif';
   ctx.fillStyle = PALETTE.inkDim;
-  drawSpacedText(ctx, 'СОВМЕСТИМОСТЬ', W / 2, 290, 26, 8);
-  drawOrnamentDivider(ctx, W / 2, 370, 260);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  drawSpacedText(ctx, 'СОВМЕСТИМОСТЬ', W / 2, 380, 26, 8);
+  drawOrnamentDivider(ctx, W / 2, 450, 260);
 
   // Два круга-знака + процент посередине
-  const ringY = 600;
+  const ringY = 680;
   const ringRadius = 130;
   const leftCx = W / 2 - 220;
   const rightCx = W / 2 + 220;
@@ -277,26 +273,21 @@ export async function generateSkyPostcard(input: SkyPostcardInput): Promise<Blob
   ctx.fillRect(0, 0, W, H);
   drawStars(ctx);
 
-  // Лого Luna.
-  ctx.fillStyle = PALETTE.goldWarm;
-  ctx.font = '200px "UnifrakturMaguntia", serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'top';
-  ctx.shadowColor = 'rgba(201,161,74,0.45)';
-  ctx.shadowBlur = 30;
-  ctx.fillText('Luna', W / 2, 90);
-  ctx.shadowBlur = 0;
+  // Лого Luna — единый PNG.
+  await drawLogoHeader(ctx);
 
   ctx.font = '26px "Cinzel", serif';
   ctx.fillStyle = PALETTE.inkDim;
-  drawSpacedText(ctx, 'ЛУНА · ТАРО', W / 2, 290, 26, 8);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  drawSpacedText(ctx, 'ЛУНА · ТАРО', W / 2, 380, 26, 8);
 
-  drawOrnamentDivider(ctx, W / 2, 370, 260);
+  drawOrnamentDivider(ctx, W / 2, 450, 260);
 
   // Круглый диск со зодиакальным кольцом + созвездием.
   const discCx = W / 2;
-  const discCy = 680;
-  const discR = 230;
+  const discCy = 700;
+  const discR = 210;
   drawSkyDisc(ctx, discCx, discCy, discR, input.zodiac);
 
   // Название знака — Cormorant 70px.
@@ -613,6 +604,34 @@ export async function sharePostcard(
 }
 
 // ── helpers ───────────────────────────────────────────────────
+
+/**
+ * Загружает PNG-лого Luna один раз и кэширует в памяти модуля.
+ * При повторной генерации открыток картинка не качается снова —
+ * мгновенно используется тот же HTMLImageElement.
+ */
+let cachedLogo: HTMLImageElement | null = null;
+async function loadLogoImage(): Promise<HTMLImageElement | null> {
+  if (cachedLogo) return cachedLogo;
+  const img = await loadImage(LOGO_URL);
+  if (img) cachedLogo = img;
+  return img;
+}
+
+/**
+ * Рисует золотой лого Luna в шапке открытки с мягким glow.
+ * Все три открытки (reading, compat, sky) используют одинаковую шапку.
+ */
+async function drawLogoHeader(ctx: CanvasRenderingContext2D): Promise<void> {
+  const logo = await loadLogoImage();
+  if (!logo) return;
+  ctx.save();
+  ctx.shadowColor = 'rgba(217, 184, 120, 0.55)';
+  ctx.shadowBlur = 36;
+  const x = (W - LOGO_W) / 2;
+  ctx.drawImage(logo, x, LOGO_Y, LOGO_W, LOGO_H);
+  ctx.restore();
+}
 
 function waitForFonts(): Promise<void> {
   if (!document.fonts || !document.fonts.ready) return Promise.resolve();
