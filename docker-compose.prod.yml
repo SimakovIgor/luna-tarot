@@ -13,7 +13,14 @@
 
 services:
   caddy:
-    image: caddy:2.8-alpine
+    # Кастомный Caddy с DuckDNS DNS-плагином (см. caddy/Dockerfile).
+    # Нужен для DNS-01 ACME challenge — иначе Let's Encrypt не может
+    # верифицировать lunatarot-kuma.duckdns.org из-за нестабильных
+    # DuckDNS secondary nameservers.
+    build:
+      context: ./caddy
+      dockerfile: Dockerfile
+    image: luna-caddy:duckdns
     container_name: luna-caddy
     restart: unless-stopped
     ports:
@@ -23,6 +30,7 @@ services:
     environment:
       LUNA_DOMAIN: ${LUNA_DOMAIN:?LUNA_DOMAIN не задан в .env}
       LUNA_KUMA_DOMAIN: ${LUNA_KUMA_DOMAIN:?LUNA_KUMA_DOMAIN не задан в .env}
+      DUCKDNS_TOKEN: ${DUCKDNS_TOKEN:?DUCKDNS_TOKEN не задан в .env}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data

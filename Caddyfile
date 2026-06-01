@@ -1,11 +1,23 @@
-# Luna Tarot — production reverse proxy
-# Caddy сам выпускает Let's Encrypt сертификат при первом обращении к домену.
-# Просто поднимаешь, Caddy в первый http-запрос видит, что серта нет, идёт в
-# ACME, получает, кладёт в /data. Перезапуск контейнера сохраняет серт.
+# Luna Tarot — production reverse proxy.
+#
+# ACME (Let's Encrypt) идёт через DNS-01 challenge с DuckDNS API token —
+# это надёжнее, чем HTTP/TLS-ALPN, особенно для DuckDNS сабдоменов:
+# их secondary nameservers иногда возвращают SERVFAIL и Let's Encrypt
+# не может валидировать домен. DNS-01 обходит эту проблему: Caddy
+# напрямую дёргает DuckDNS API через токен.
+#
+# DUCKDNS_TOKEN должен быть в .env.
 
-# Uptime Kuma — отдельный поддомен с auto-HTTPS. Логин/пароль настраиваются
-# в самом Kuma при первом открытии веб-интерфейса.
+# Uptime Kuma — отдельный поддомен с auto-HTTPS.
+# DNS-01 с явными публичными resolvers (внутренний Docker DNS таймаутит
+# при propagation check к authoritative nameservers DuckDNS).
 {$LUNA_KUMA_DOMAIN} {
+    tls {
+        dns duckdns {$DUCKDNS_TOKEN}
+        resolvers 1.1.1.1 8.8.8.8
+        propagation_delay 30s
+        propagation_timeout 5m
+    }
     reverse_proxy kuma:3001
     encode gzip zstd
     log {
@@ -15,6 +27,12 @@
 }
 
 {$LUNA_DOMAIN} {
+    tls {
+        dns duckdns {$DUCKDNS_TOKEN}
+        resolvers 1.1.1.1 8.8.8.8
+        propagation_delay 30s
+        propagation_timeout 5m
+    }
     # Mini App + REST + actuator → backend (Spring Boot слушает 8080 внутри сети)
     handle /app/* {
         reverse_proxy backend:8080
