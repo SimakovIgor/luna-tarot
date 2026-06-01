@@ -6,8 +6,10 @@ import com.lunatarot.backend.domain.model.UserEntity;
 import com.lunatarot.backend.domain.model.enums.CompatibilityStatus;
 import com.lunatarot.backend.domain.model.enums.ZodiacSign;
 import com.lunatarot.backend.domain.repository.CompatibilityCheckRepository;
+import com.lunatarot.backend.domain.repository.UserRepository;
 import com.lunatarot.backend.service.EsotericProfile;
 import com.lunatarot.backend.service.EsotericProfileCalculator;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,7 +24,7 @@ import java.util.Optional;
 /**
  * Рассчитывает совместимость и сохраняет результат как запись в Дневник.
  * Поддерживает solo-режим (имя+ДР партнёра вручную) и invite-flow
- * (друг входит по ссылке — добавит в Этапе 2).
+ * (друг входит по ссылке).
  */
 @Service
 public class CompatibilityService {
@@ -41,20 +43,23 @@ public class CompatibilityService {
     private final EsotericProfileCalculator calculator;
     private final CompatibilityGenerator generator;
     private final CompatibilityCheckRepository repository;
-    private final CompatibilityNotifier notifier;
+    private final UserRepository userRepository;
+    private final ApplicationEventPublisher eventPublisher;
     private final LunaTelegramProperties telegramProperties;
     private final Clock clock;
 
     public CompatibilityService(EsotericProfileCalculator calculator,
                                 CompatibilityGenerator generator,
                                 CompatibilityCheckRepository repository,
-                                CompatibilityNotifier notifier,
+                                UserRepository userRepository,
+                                ApplicationEventPublisher eventPublisher,
                                 LunaTelegramProperties telegramProperties,
                                 Clock clock) {
         this.calculator = calculator;
         this.generator = generator;
         this.repository = repository;
-        this.notifier = notifier;
+        this.userRepository = userRepository;
+        this.eventPublisher = eventPublisher;
         this.telegramProperties = telegramProperties;
         this.clock = clock;
     }
@@ -116,8 +121,10 @@ public class CompatibilityService {
     // ── Invite-flow ─────────────────────────────────────────────
 
     /**
-     * Создать PENDING_INVITE запись с уникальным slug-ом. Инициатор отправит
-     * Telegram-ссылку другу; когда тот войдёт — {@link #acceptInvite}.
+     * Создать PENDING_INVITE запись с уникальным slug-ом. Если у инициатора
+     * уже есть свежий PENDING — возвращаем его, чтобы двойной тап «Создать
+     * ссылку» не плодил дубли. Инициатор отправит Telegram-ссылку другу;
+     * когда тот войдёт — {@link #acceptInvite}.
      */
     @Transactional
     public CompatibilityCheckEntity createInvite(UserEntity initiator) {
@@ -125,6 +132,11 @@ public class CompatibilityService {
             throw new IllegalStateException(
                 "Сначала укажи свою дату рождения в профиле — без этого Луна не посчитает совместимость."
             );
+        }
+        Optional<CompatibilityCheckEntity> existing =
+            repository.findFirstPendingByInitiator(initiator.getId());
+        if (existing.isPresent()) {
+            return existing.get();
         }
         String slug = generateUniqueSlug();
         // PENDING-запись: партнёра ещё нет, score/text заполним при accept.
@@ -143,22 +155,48 @@ public class CompatibilityService {
         return repository.save(entity);
     }
 
-    /** Поиск PENDING-приглашения по slug — для friend'а, перешедшего по ссылке. */
+    /** Поиск pending-invite по slug — для friend'а, перешедшего по ссылке. */
     public Optional<CompatibilityCheckEntity> findPendingInvite(String slug) {
         return repository.findByInviteSlug(slug)
             .filter(c -> c.getStatus() == CompatibilityStatus.PENDING_INVITE);
     }
 
     /**
+     * Поиск инвайта для конкретного юзера: PENDING_INVITE (любой может видеть
+     * приглашение, slug — единственный «секрет») или COMPLETED, если юзер —
+     * участник (инициатор или партнёр). Используется при возврате по deeplink'у
+     * после того, как accept уже прошёл — чтобы участник мог снова увидеть
+     * результат, не открывая Дневник.
+     */
+    public Optional<CompatibilityCheckEntity> findInviteForUser(String slug, long userId) {
+        return repository.findByInviteSlug(slug)
+            .filter(c -> {
+                if (c.getStatus() == CompatibilityStatus.PENDING_INVITE) {
+                    return true;
+                }
+                boolean isInitiator = c.getInitiatorUserId() != null
+                    && c.getInitiatorUserId() == userId;
+                boolean isPartner = c.getPartnerUserId() != null
+                    && c.getPartnerUserId() == userId;
+                return isInitiator || isPartner;
+            });
+    }
+
+    /**
      * Friend перешёл по deeplink и идентифицирован как user.
      * Заполняем partner_*, генерируем score+text, переключаем на COMPLETED.
      * После этого запись видна обоим в Дневнике.
+     *
+     * Atomic claim через pessimistic lock + повторную проверку статуса:
+     * два параллельных тапа не дадут две COMPLETED-записи и два пуша.
+     * Telegram-уведомление публикуется как событие AFTER_COMMIT — не висит
+     * в открытой транзакции.
      */
     @Transactional
     public CompatibilityCheckEntity acceptInvite(String slug,
                                                  UserEntity friend,
                                                  UserEntity initiator) {
-        CompatibilityCheckEntity entity = repository.findByInviteSlug(slug)
+        CompatibilityCheckEntity entity = repository.findByInviteSlugForUpdate(slug)
             .orElseThrow(() -> new IllegalArgumentException("Приглашение не найдено или уже использовано"));
         if (entity.getStatus() != CompatibilityStatus.PENDING_INVITE) {
             throw new IllegalArgumentException("Это приглашение уже завершено");
@@ -186,11 +224,19 @@ public class CompatibilityService {
         entity.setScore(output.score());
         entity.setResultText(output.text());
         entity.setStatus(CompatibilityStatus.COMPLETED);
-        // Slug больше не нужен, освобождаем чтоб не висел в уникальном индексе.
-        entity.setInviteSlug(null);
+        // Slug НЕ обнуляем — он остаётся ключом для deeplink'а, чтобы участник
+        // мог вернуться по ссылке и снова увидеть результат, если закрыл
+        // Mini App до момента отрисовки экрана. Партнёр в записи только один,
+        // поэтому коллизий по unique-индексу не будет.
         CompatibilityCheckEntity saved = repository.save(entity);
-        // Уведомляем инициатора в боте — он не следит за приложением постоянно.
-        notifier.notifyAccepted(initiator, friend, output.score());
+        // Уведомляем инициатора в боте уже после коммита транзакции — иначе
+        // медленный Telegram API будет держать row-lock, а его падение откатит
+        // accept целиком (см. CompatibilityNotifier).
+        eventPublisher.publishEvent(new CompatibilityAcceptedEvent(
+            initiator.getTgUserId(),
+            friend.getName(),
+            output.score()
+        ));
         return saved;
     }
 
@@ -215,6 +261,11 @@ public class CompatibilityService {
             throw new IllegalArgumentException("Это не твоё приглашение");
         }
         repository.delete(entity);
+    }
+
+    /** Удобный лукап инициатора по записи — для контроллера. */
+    public Optional<UserEntity> findInitiator(CompatibilityCheckEntity entity) {
+        return userRepository.findById(entity.getInitiatorUserId());
     }
 
     /** Telegram-ссылка вида https://t.me/{bot}?startapp=compat_{slug}. */

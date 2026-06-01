@@ -149,25 +149,20 @@ tasks.jacocoTestCoverageVerification {
             limit {
                 counter = "LINE"
                 value = "COVEREDRATIO"
-                // 2026-06: добавлен большой compatibility invite-flow + sky postcard
-                // helpers без тестов — линии просели до ~0.57. Понижено до 0.55.
-                // Поднять обратно после написания тестов на CompatibilityService
-                // invite/accept-flow.
-                minimum = "0.55".toBigDecimal()
+                // 2026-06: после CompatibilityInviteFlowTest линии 0.599 — поднимаем порог.
+                minimum = "0.58".toBigDecimal()
             }
             limit {
                 counter = "BRANCH"
                 value = "COVEREDRATIO"
-                // 2026-05: после удаления state-machine онбординга в боте (имя/пол/ДР собираются
-                // в Mini App) исчезла масса веток вместе с их тестами — общее branch-покрытие
-                // просело до ~0.46. Порог временно опущен до 0.45; вернуть к 0.50 после
-                // добавления тестов на новый BotMessageSender + OnboardingService.
-                minimum = "0.45".toBigDecimal()
+                // 2026-06: после CompatibilityInviteFlowTest branches 0.491 — поднимаем порог.
+                minimum = "0.48".toBigDecimal()
             }
             limit {
                 counter = "METHOD"
                 value = "COVEREDRATIO"
-                minimum = "0.65".toBigDecimal()
+                // 2026-06: methods 0.688 после новых тестов — поднимаем порог.
+                minimum = "0.67".toBigDecimal()
             }
         }
     }

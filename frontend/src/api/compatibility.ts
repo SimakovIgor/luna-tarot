@@ -51,6 +51,12 @@ export interface CompatibilityInviteInfo {
   initiatorZodiac: ZodiacSign;
   /** «PENDING_INVITE» | «COMPLETED». */
   status: string;
+  /**
+   * Заполнен, если статус COMPLETED и текущий юзер — участник. В этом
+   * случае фронт сразу показывает финальный экран без accept'а (кейс
+   * «принял → свернул app → вернулся по ссылке»).
+   */
+  result: CompatibilityResponse | null;
 }
 
 /** Инициатор: создать invite-ссылку. */

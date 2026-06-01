@@ -1,18 +1,20 @@
 package com.lunatarot.backend.service.compatibility;
 
-import com.lunatarot.backend.domain.model.UserEntity;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
 /**
  * Шлёт уведомление инициатору в Telegram-бот, когда друг принимает
  * приглашение и результат готов.
  *
- * Не критично если упадёт (юзер всё равно увидит в Дневнике) — просто
- * логируем warning и едем дальше.
+ * Срабатывает AFTER_COMMIT — DB-транзакция уже закрыта, поэтому любые
+ * проблемы с Telegram API (медленный ответ, заблокированный бот, network)
+ * не блокируют row-lock и не откатывают сохранение записи. Если упадёт —
+ * пользователь всё равно увидит результат в Дневнике.
  */
 @Slf4j
 @Component
@@ -24,19 +26,22 @@ public class CompatibilityNotifier {
         this.telegramClient = telegramClient;
     }
 
-    public void notifyAccepted(UserEntity initiator, UserEntity friend, int score) {
-        String text = "✦ " + friend.getName() + " приняла твоё приглашение.\n\n"
-            + "Луна сверила вас — резонанс " + score + "%. Загляни в Mini App, "
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onAccepted(CompatibilityAcceptedEvent event) {
+        String text = "✦ " + event.friendName() + " приняла твоё приглашение.\n\n"
+            + "Луна сверила вас — резонанс " + event.score() + "%. Загляни в Mini App, "
             + "там полный разбор: что связывает, что разводит и совет Луны.";
         try {
             telegramClient.execute(SendMessage.builder()
-                .chatId(initiator.getTgUserId())
+                .chatId(event.initiatorTgUserId())
                 .text(text)
                 .build());
-            log.info("Compatibility-notify sent: initiator={} friend={}", initiator.getId(), friend.getId());
-        } catch (TelegramApiException e) {
-            log.warn("Не удалось отправить compat-notify инициатору {}: {}",
-                initiator.getId(), e.getMessage());
+            log.info("Compatibility-notify sent: initiatorTg={}", event.initiatorTgUserId());
+        } catch (Exception e) {
+            // Любая ошибка — лог, без проброса: транзакция уже зафиксирована,
+            // нет смысла валить ответ пользователю из-за upstream issue.
+            log.warn("Не удалось отправить compat-notify инициатору tg={}: {}",
+                event.initiatorTgUserId(), e.getMessage());
         }
     }
 }

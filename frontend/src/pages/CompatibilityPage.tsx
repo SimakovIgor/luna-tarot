@@ -54,7 +54,17 @@ export function CompatibilityPage({ onClose, pendingInviteSlug, myName }: Compat
     if (!pendingInviteSlug) return;
     let alive = true;
     fetchCompatibilityInvite(pendingInviteSlug)
-      .then((info) => { if (alive) setInviteInfo(info); })
+      .then((info) => {
+        if (!alive) return;
+        setInviteInfo(info);
+        // Если приглашение уже принято и текущий юзер — участник, бэк
+        // отдаёт result сразу. Это закрывает кейс «принял → свернул app
+        // до отрисовки → открыл ссылку повторно».
+        if (info.status === 'COMPLETED' && info.result) {
+          setResult(info.result);
+          setStage('result');
+        }
+      })
       .catch((e) => {
         if (alive) {
           setError(e instanceof Error ? e.message : 'Приглашение не найдено');
@@ -136,7 +146,8 @@ export function CompatibilityPage({ onClose, pendingInviteSlug, myName }: Compat
     if (!invite) return;
     haptic('medium');
     track('compat_invite_shared');
-    const text = 'Пойдём, спросим у Луны? Открой ссылку — она посчитает нашу совместимость.';
+    const text = 'Пойдём, спросим у Луны? Открой ссылку — она посчитает нашу совместимость. '
+      + 'Ссылка одноразовая — кто откроет первым, тот и войдёт.';
     const nav = navigator as Navigator & {
       share?: (data: { title?: string; text?: string; url?: string }) => Promise<void>;
       clipboard?: { writeText: (s: string) => Promise<void> };
@@ -169,8 +180,12 @@ export function CompatibilityPage({ onClose, pendingInviteSlug, myName }: Compat
     }
   };
 
+  const [accepting, setAccepting] = useState(false);
   const handleAcceptInvite = async () => {
-    if (!pendingInviteSlug) return;
+    // Двойной тап или лагнувшая сеть → не плодим повторных accept'ов: бэк
+    // защищён pessimistic-локом, но фронт тоже не шлёт второй запрос.
+    if (!pendingInviteSlug || accepting) return;
+    setAccepting(true);
     setError(null);
     setStage('loading');
     haptic('medium');
@@ -183,6 +198,8 @@ export function CompatibilityPage({ onClose, pendingInviteSlug, myName }: Compat
     } catch (e) {
       setError(e instanceof Error ? e.message : 'не вышло');
       setStage('invitee');
+    } finally {
+      setAccepting(false);
     }
   };
 
@@ -416,13 +433,14 @@ export function CompatibilityPage({ onClose, pendingInviteSlug, myName }: Compat
                   {error && <p className={styles.error}>{error}</p>}
 
                   <div className={styles.formActions}>
-                    <GoldButton full onClick={handleAcceptInvite}>
-                      Войти и сравнить
+                    <GoldButton full onClick={handleAcceptInvite} disabled={accepting}>
+                      {accepting ? 'Луна сверяет…' : 'Войти и сравнить'}
                     </GoldButton>
                     <button
                       type="button"
                       className={styles.inviteLink}
                       onClick={onClose}
+                      disabled={accepting}
                     >
                       В другой раз
                     </button>

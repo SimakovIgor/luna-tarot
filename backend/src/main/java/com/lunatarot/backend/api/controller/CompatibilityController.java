@@ -9,6 +9,7 @@ import com.lunatarot.backend.api.dto.CompatibilityRequestDto;
 import com.lunatarot.backend.api.dto.CompatibilityResponseDto;
 import com.lunatarot.backend.domain.model.CompatibilityCheckEntity;
 import com.lunatarot.backend.domain.model.UserEntity;
+import com.lunatarot.backend.domain.model.enums.CompatibilityStatus;
 import com.lunatarot.backend.domain.repository.UserRepository;
 import com.lunatarot.backend.service.compatibility.CompatibilityRequest;
 import com.lunatarot.backend.service.compatibility.CompatibilityResult;
@@ -25,7 +26,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
@@ -63,22 +68,38 @@ public class CompatibilityController {
     /**
      * История совместимостей юзера для Дневника — solo + invite, в которых
      * он либо инициатор, либо партнёр. Только COMPLETED.
+     *
+     * Для role=PARTNER подставляем имя инициатора (не partner_name — там лежит
+     * имя самого юзера, друг видел бы «совместимость с собой»). Имена тянем
+     * одним запросом findAllById, чтобы не плодить N+1.
      */
     @GetMapping("/history")
     public List<CompatibilityHistoryItemDto> history(HttpServletRequest request) {
         UserEntity me = currentUser(request);
         List<CompatibilityCheckEntity> items = compatibilityService.historyFor(me.getId());
+        Set<Long> initiatorIds = items.stream()
+            .filter(c -> !c.getInitiatorUserId().equals(me.getId()))
+            .map(CompatibilityCheckEntity::getInitiatorUserId)
+            .collect(Collectors.toCollection(HashSet::new));
+        Map<Long, String> initiatorNames = userRepository.findAllById(initiatorIds).stream()
+            .collect(Collectors.toMap(UserEntity::getId, UserEntity::getName));
         return items.stream()
-            .map(c -> new CompatibilityHistoryItemDto(
-                c.getId(),
-                c.getInitiatorUserId().equals(me.getId()) ? "INITIATOR" : "PARTNER",
-                c.getPartnerName(),
-                c.getInitiatorZodiac(),
-                c.getPartnerZodiac(),
-                c.getScore(),
-                c.getResultText(),
-                c.getCreatedAt()
-            ))
+            .map(c -> {
+                boolean amInitiator = c.getInitiatorUserId().equals(me.getId());
+                String displayName = amInitiator
+                    ? c.getPartnerName()
+                    : initiatorNames.getOrDefault(c.getInitiatorUserId(), "—");
+                return new CompatibilityHistoryItemDto(
+                    c.getId(),
+                    amInitiator ? "INITIATOR" : "PARTNER",
+                    displayName,
+                    amInitiator ? c.getInitiatorZodiac() : c.getPartnerZodiac(),
+                    amInitiator ? c.getPartnerZodiac() : c.getInitiatorZodiac(),
+                    c.getScore(),
+                    c.getResultText(),
+                    c.getCreatedAt()
+                );
+            })
             .toList();
     }
 
@@ -121,18 +142,35 @@ public class CompatibilityController {
         }
     }
 
-    /** Friend перешёл по ссылке — отдаём инфо о приглашении (имя инициатора, его знак). */
+    /**
+     * Friend перешёл по ссылке — отдаём инфо о приглашении.
+     *
+     * Для PENDING — имя/знак инициатора (чтобы экран invitee показал «{Имя}
+     * зовёт тебя к Луне»).
+     *
+     * Для COMPLETED — если текущий юзер участник (инициатор или партнёр),
+     * сразу отдаём полный результат с его «my-перспективы». Это нужно для
+     * сценария «принял → app свернули → вернулся по ссылке»: фронт сразу
+     * покажет финальный экран без повторного accept'а.
+     */
     @GetMapping("/invite/{slug}")
-    public CompatibilityInviteInfoDto getInvite(@PathVariable String slug) {
-        CompatibilityCheckEntity entity = compatibilityService.findPendingInvite(slug)
+    public CompatibilityInviteInfoDto getInvite(HttpServletRequest request,
+                                                @PathVariable String slug) {
+        UserEntity me = currentUser(request);
+        CompatibilityCheckEntity entity = compatibilityService.findInviteForUser(slug, me.getId())
             .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Приглашение не найдено"));
-        UserEntity initiator = userRepository.findById(entity.getInitiatorUserId())
+        UserEntity initiator = compatibilityService.findInitiator(entity)
             .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Инициатор не найден"));
+        CompatibilityResponseDto result = null;
+        if (entity.getStatus() == CompatibilityStatus.COMPLETED) {
+            result = resultFromPerspective(entity, me, initiator);
+        }
         return new CompatibilityInviteInfoDto(
             entity.getInviteSlug(),
             initiator.getName(),
             entity.getInitiatorZodiac(),
-            entity.getStatus().name()
+            entity.getStatus().name(),
+            result
         );
     }
 
@@ -144,22 +182,32 @@ public class CompatibilityController {
         try {
             CompatibilityCheckEntity entity = compatibilityService.findPendingInvite(slug)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Приглашение не найдено"));
-            UserEntity initiator = userRepository.findById(entity.getInitiatorUserId())
+            UserEntity initiator = compatibilityService.findInitiator(entity)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Инициатор не найден"));
             CompatibilityCheckEntity completed = compatibilityService.acceptInvite(slug, friend, initiator);
-            return new CompatibilityResponseDto(
-                friend.getId().equals(completed.getInitiatorUserId())
-                    ? completed.getInitiatorZodiac() : completed.getPartnerZodiac(),
-                friend.getId().equals(completed.getInitiatorUserId())
-                    ? completed.getPartnerZodiac() : completed.getInitiatorZodiac(),
-                friend.getId().equals(completed.getInitiatorUserId())
-                    ? completed.getPartnerName() : initiator.getName(),
-                completed.getScore(),
-                completed.getResultText()
-            );
+            return resultFromPerspective(completed, friend, initiator);
         } catch (IllegalArgumentException | IllegalStateException e) {
             throw new ResponseStatusException(BAD_REQUEST, e.getMessage(), e);
         }
+    }
+
+    /**
+     * Собирает result-DTO с точки зрения текущего юзера. «My» — это тот, кто
+     * смотрит. «Partner» — второй участник. Для инициатора это сам partner,
+     * для друга — инициатор (тогда partnerName берём из его профиля, чтобы
+     * не светить хранимое в записи имя «—» если кейс кривой).
+     */
+    private static CompatibilityResponseDto resultFromPerspective(CompatibilityCheckEntity entity,
+                                                                  UserEntity viewer,
+                                                                  UserEntity initiator) {
+        boolean amInitiator = entity.getInitiatorUserId().equals(viewer.getId());
+        return new CompatibilityResponseDto(
+            amInitiator ? entity.getInitiatorZodiac() : entity.getPartnerZodiac(),
+            amInitiator ? entity.getPartnerZodiac() : entity.getInitiatorZodiac(),
+            amInitiator ? entity.getPartnerName() : initiator.getName(),
+            entity.getScore(),
+            entity.getResultText()
+        );
     }
 
     private UserEntity currentUser(HttpServletRequest request) {
