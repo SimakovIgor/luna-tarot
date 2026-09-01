@@ -46,8 +46,8 @@ AI-таролог в Telegram. Мистический, на русском, на
 | Reverse proxy | Caddy с плагином duckdns (auto-HTTPS, DNS-01 challenge) |
 | Контейнеризация | Docker + docker-compose (`docker-compose.slim.yml`) |
 | DNS | DuckDNS (`lunatarot.duckdns.org`, A-record на VPS IP) |
-| Деплой | сборка на маке, `docker save \| ssh docker load` (`scripts/deploy-slim.sh`) |
-| Bootstrap | `scripts/provision-ishosting.sh` (swap, Docker, ufw на чистом Ubuntu 22.04) |
+| Деплой | сборка на маке, `docker save \| ssh docker load` (`scripts/deploy-slim.sh`, быстрый путь `scripts/quick-deploy.sh`) |
+| Bootstrap | `scripts/deploy.sh` на чистом сервере (внутри `provision-ishosting.sh`: swap, Docker, ufw) |
 
 ### Observability
 | Сервис | Где живёт | Что мониторит |

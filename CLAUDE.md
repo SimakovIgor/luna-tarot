@@ -229,7 +229,7 @@ Hibernate DDL установлен в `validate` — все изменения �
 
 Стек: is\*hosting Lite (Даллас, 1 vCPU / 1 ГБ) + Ubuntu 22.04 + Docker Compose (`docker-compose.slim.yml`: caddy, postgres, backend) + Caddy auto-HTTPS + DuckDNS поддомен.
 
-Обновление кода: `./scripts/deploy-slim.sh`. Gradle на сервере не запускаем, на 1 ГБ сборка падает по OOM: JAR и образы собираются на маке под `linux/amd64` и уезжают через `docker save | ssh docker load`. SSH: `ssh luna-is` (config в `~/.ssh/config`).
+Обновление кода: `./scripts/deploy-slim.sh`. Gradle на сервере не запускаем, на 1 ГБ сборка падает по OOM: JAR и образы собираются на маке под `linux/amd64` и уезжают через `docker save | ssh docker load`. Только backend быстрее выкатить через `./scripts/quick-deploy.sh`, чистый сервер поднимается одним `./scripts/deploy.sh`. SSH: `ssh luna-is` (config в `~/.ssh/config`).
 
 ## Дизайн-артефакты
 

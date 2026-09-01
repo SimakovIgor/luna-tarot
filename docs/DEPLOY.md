@@ -82,7 +82,26 @@ cd ~/IdeaProjects/luna-tarot
 ./scripts/deploy-slim.sh
 ```
 
-Скрипт делает шесть шагов: `bootJar`, образ backend, образ caddy, `docker save | ssh docker load`, заливка конфигов, `up -d`. Целиком примерно две минуты, из них заливка образов около сорока секунд.
+Шесть шагов: `bootJar`, образ backend, образ caddy, `docker save | ssh docker load`, заливка конфигов, `up -d`. Примерно две минуты, из них заливка образов около сорока секунд.
+
+Если менял только Java или фронт, быстрее так:
+
+```bash
+./scripts/quick-deploy.sh
+```
+
+Везет на сервер один JAR (114 МБ), тонкий образ поверх готовой JRE собирается там же. Caddy и postgres не трогаются (`--no-deps`), конфиги не заливаются. В конце сам дожидается `health: UP` и печатает имя выехавшего бандла. Около двух минут против четырех у полной выкатки, почти все время это заливка JAR.
+
+### Все скрипты
+
+| Скрипт | Когда |
+|---|---|
+| `scripts/deploy.sh` | новый сервер с нуля: проверяет ssh, гоняет провижен, требует `.env`, зовет полную выкатку |
+| `scripts/provision-ishosting.sh` | только подготовка сервера: swap, Docker, ufw |
+| `scripts/deploy-slim.sh` | полная выкатка: оба образа плюс конфиги |
+| `scripts/quick-deploy.sh` | быстрый редеплой одного backend |
+
+Во всех скриптах хост берется из `SSH_HOST`, по умолчанию `luna-is`. Домен для health-проверки из `LUNA_DOMAIN`.
 
 Если правил только `Caddyfile.slim`:
 
@@ -104,11 +123,10 @@ ssh luna-is 'docker stats --no-stream --format "{{.Name}} {{.MemUsage}}"'
 ## Первый запуск на чистом сервере
 
 ```bash
-scp scripts/provision-ishosting.sh luna-is:/root/
-ssh luna-is 'bash /root/provision-ishosting.sh'
+./scripts/deploy.sh
 ```
 
-Ставит swap 4 ГБ, Docker и ufw. Дальше нужен `.env` в `/opt/luna-tarot` (состав ниже) и `./scripts/deploy-slim.sh`.
+Проверит вход по ключу, поставит swap 4 ГБ, Docker и ufw, потом сам позовет полную выкатку. Если на сервере еще нет `.env`, остановится и скажет, что заполнить (состав ниже). Заполняешь и запускаешь повторно.
 
 ### Состав `.env` на сервере
 
@@ -212,10 +230,9 @@ crontab -e
 
 | Файл | Почему |
 |---|---|
-| `scripts/deploy.sh` | bootstrap под Hetzner, заменен на `provision-ishosting.sh` |
-| `scripts/quick-deploy.sh` | ходит на ssh-хост `luna`, это удаленный Hetzner. К тому же собирает Gradle на сервере |
-| `docker-compose.prod.yml` | пятиконтейнерный стек, в 1 ГБ не влезает |
-| `Caddyfile` | конфиг с лендингом и поддоменом Kuma |
+| `docker-compose.prod.yml` | пятиконтейнерный стек с лендингом и Kuma, в 1 ГБ не влезает |
+| `Caddyfile` | конфиг под тот же пятиконтейнерный стек |
+| `backend/Dockerfile` | собирает Gradle внутри образа, на сервере падает по OOM. Используется только для локальной сборки |
 
 Хост `luna` в `~/.ssh/config` закомментирован: IP `178.105.198.205` отдан другому клиенту.
 
