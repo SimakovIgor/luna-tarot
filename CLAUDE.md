@@ -14,7 +14,7 @@
 - Профиль с эзо-данными и редактированием.
 - Mini App: cinematic splash → hub без перемонтажа карты, 4 layout финального экрана (row/pentagram/celticCross/wheel).
 - Telegram-бот: long-polling, утренний push карты дня (10 шаблонов, детерминированная ротация по `tgUserId+dayOfYear`).
-- **Production deployed** на Hetzner CX22 + DuckDNS-поддомен + Caddy auto-HTTPS. URL: `https://lunatarot.duckdns.org/app/`.
+- **Production deployed** на is\*hosting Lite + DuckDNS-поддомен + Caddy auto-HTTPS. URL: `https://lunatarot.duckdns.org/app/`.
 - **Observability**: Sentry Cloud (JS-ошибки) + PostHog Cloud (funnel/retention/session replay) + Uptime Kuma (self-host).
 - **Admin dashboard** `/admin/`: totals, daily breakdown, типы раскладов. HTTP Basic auth.
 - **MenuButtonSync**: при старте backend синхронизирует Chat Menu Button бота с `TG_MINI_APP_URL` через `setChatMenuButton` API.
@@ -227,9 +227,9 @@ Hibernate DDL установлен в `validate` — все изменения �
 
 Документация: [`docs/DEPLOY.md`](./docs/DEPLOY.md).
 
-Стек: Hetzner CX22 (Falkenstein) + Ubuntu 24.04 + Docker Compose (`docker-compose.prod.yml`) + Caddy auto-HTTPS + DuckDNS поддомен.
+Стек: is\*hosting Lite (Даллас, 1 vCPU / 1 ГБ) + Ubuntu 22.04 + Docker Compose (`docker-compose.slim.yml`: caddy, postgres, backend) + Caddy auto-HTTPS + DuckDNS поддомен.
 
-Обновление кода: `scp` тарбола → `docker compose -f docker-compose.prod.yml --env-file .env up -d --build backend`. SSH: `ssh luna` (config в `~/.ssh/config`).
+Обновление кода: `./scripts/deploy-slim.sh`. Gradle на сервере не запускаем, на 1 ГБ сборка падает по OOM: JAR и образы собираются на маке под `linux/amd64` и уезжают через `docker save | ssh docker load`. SSH: `ssh luna-is` (config в `~/.ssh/config`).
 
 ## Дизайн-артефакты
 
