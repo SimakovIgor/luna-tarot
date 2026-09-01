@@ -42,12 +42,12 @@ AI-таролог в Telegram. Мистический, на русском, на
 ### Infrastructure (production)
 | Слой | Технология |
 |---|---|
-| VPS | Hetzner CX22 (2 vCPU, 4GB RAM, Falkenstein) |
-| Reverse proxy | Caddy 2.8 (auto-HTTPS через Let's Encrypt) |
-| Контейнеризация | Docker + docker-compose (`docker-compose.prod.yml`) |
-| DNS | DuckDNS (бесплатный поддомен, A-record на VPS IP) |
-| Деплой | scp tarball + `docker compose up -d --build` |
-| Bootstrap | `scripts/deploy.sh` (Docker install + firewall на чистом Ubuntu 24.04) |
+| VPS | is\*hosting Lite (1 vCPU, 1GB RAM, Даллас) |
+| Reverse proxy | Caddy с плагином duckdns (auto-HTTPS, DNS-01 challenge) |
+| Контейнеризация | Docker + docker-compose (`docker-compose.slim.yml`) |
+| DNS | DuckDNS (`lunatarot.duckdns.org`, A-record на VPS IP) |
+| Деплой | сборка на маке, `docker save \| ssh docker load` (`scripts/deploy-slim.sh`) |
+| Bootstrap | `scripts/provision-ishosting.sh` (swap, Docker, ufw на чистом Ubuntu 22.04) |
 
 ### Observability
 | Сервис | Где живёт | Что мониторит |
