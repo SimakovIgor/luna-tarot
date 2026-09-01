@@ -1,0 +1,19 @@
+{$LUNA_DOMAIN} {
+    tls {
+        dns duckdns {$DUCKDNS_TOKEN}
+        resolvers 1.1.1.1 8.8.8.8
+        propagation_delay 30s
+        propagation_timeout 5m
+    }
+
+    redir / /app/ 302
+
+    reverse_proxy backend:8080
+
+    encode gzip zstd
+
+    log {
+        output stdout
+        format console
+    }
+}

@@ -1,0 +1,12 @@
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+
+RUN addgroup -S luna && adduser -S luna -G luna
+USER luna
+
+COPY build/libs/app.jar app.jar
+
+EXPOSE 8080
+ENV JAVA_OPTS="-Xms128m -Xmx320m -Xss512k -XX:MaxMetaspaceSize=128m -XX:+UseSerialGC -XX:TieredStopAtLevel=1"
+
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/app.jar"]
